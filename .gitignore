@@ -14,6 +14,9 @@ instance/*
 .env.test
 .env.production
 
+# Uploads
+uploads/
+
 ### Flask.Python Stack ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
