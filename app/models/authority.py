@@ -12,3 +12,5 @@ class Authority(Document):
     meta = {
         'collection': 'authorities'
     }
+
+    

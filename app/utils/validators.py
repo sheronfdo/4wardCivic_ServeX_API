@@ -2,8 +2,8 @@
 Input validation utilities
 """
 import re
-from typing import Dict, Any
-
+from typing import List, Optional, Dict, Any
+from app.models.service import Service
 
 def validate_email(email: str) -> Dict[str, Any]:
     """
@@ -254,3 +254,83 @@ def validate_required_fields(data, required_fields):
             missing_fields.append(field)
     
     return len(missing_fields) == 0, missing_fields
+
+# Utility functions
+def validate_service_data(service_data: Dict[str, Any]) -> Dict[str, str]:
+    """
+    Validate service data and return any validation errors
+    """
+    errors = {}
+    
+    # Validate service name
+    service_name = service_data.get('serviceName', '').strip()
+    if not service_name:
+        errors['serviceName'] = "Service name is required"
+    elif len(service_name) > 255:
+        errors['serviceName'] = "Service name must be less than 255 characters"
+    
+    # Validate service fee
+    try:
+        fee = float(service_data.get('serviceFeeLRK', 0))
+        if fee < 0:
+            errors['serviceFeeLRK'] = "Service fee cannot be negative"
+    except (ValueError, TypeError):
+        errors['serviceFeeLRK'] = "Service fee must be a valid number"
+    
+    # Validate slot duration
+    try:
+        duration = int(service_data.get('slotduration', 0))
+        if duration <= 0:
+            errors['slotduration'] = "Slot duration must be greater than 0 minutes"
+        elif duration > 1440:  # 24 hours in minutes
+            errors['slotduration'] = "Slot duration cannot exceed 24 hours"
+    except (ValueError, TypeError):
+        errors['slotduration'] = "Slot duration must be a valid number"
+    
+    # Validate max people per slot
+    try:
+        max_people = int(service_data.get('maxPeoplePerSlot', 1))
+        if max_people <= 0:
+            errors['maxPeoplePerSlot'] = "Max people per slot must be greater than 0"
+        elif max_people > 100:
+            errors['maxPeoplePerSlot'] = "Max people per slot cannot exceed 100"
+    except (ValueError, TypeError):
+        errors['maxPeoplePerSlot'] = "Max people per slot must be a valid number"
+    
+    # Validate status
+    if service_data.get('status') and service_data['status'] not in ['Active', 'Inactive']:
+        errors['status'] = "Status must be either 'Active' or 'Inactive'"
+    
+    return errors
+
+def search_services_advanced(
+    name: Optional[str] = None,
+    min_fee: Optional[float] = None,
+    max_fee: Optional[float] = None,
+    kyc_required: Optional[bool] = None,
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100
+) -> List[Service]:
+    """
+    Advanced search for services with multiple filters
+    """
+    query = Service.objects()
+    
+    if name:
+        pattern = re.compile(re.escape(name), re.IGNORECASE)
+        query = query.filter(service_name=pattern)
+    
+    if min_fee is not None:
+        query = query.filter(service_fee_lrk__gte=min_fee)
+    
+    if max_fee is not None:
+        query = query.filter(service_fee_lrk__lte=max_fee)
+    
+    if kyc_required is not None:
+        query = query.filter(kyc=kyc_required)
+    
+    if status:
+        query = query.filter(status=status)
+    
+    return query.skip(skip).limit(limit).order_by('-created_at')
