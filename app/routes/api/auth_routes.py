@@ -28,8 +28,8 @@ def register_authority():
     )
     return jsonify({'id': authority_id}), 201
 
-@auth_bp.route('/admin/register', methods=['POST'])
-def register_admin():
+@auth_bp.route('/authority/admin/register', methods=['POST'])
+def register_authority_admin():
     data = request.get_json()
     authority_obj = None
 
@@ -61,30 +61,6 @@ def register_admin():
         return jsonify({'message': 'Admin registered', 'user': result['data']}), 201
     else:
         return jsonify({'message': result['message']}), 400
-
-
-# @auth_bp.route('/register', methods=['POST'])
-# def register():
-#     """Register a new user"""
-#     try:
-#         data = request.get_json()
-        
-#         if not data:
-#             return jsonify({'message': 'No data provided'}), 400
-        
-#         # Create user through service
-#         result = user_service.create_user(data)
-        
-#         if result['success']:
-#             return jsonify({
-#                 'message': result['message'],
-#                 'user': result['data']
-#             }), 201
-#         else:
-#             return jsonify({'message': result['message']}), 400
-            
-#     except Exception as e:
-#         return jsonify({'message': f'Registration failed: {str(e)}'}), 500
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -145,74 +121,74 @@ def validate_token():
     except Exception as e:
         return jsonify({'valid': False, 'message': str(e)}), 500
 
-
-@auth_bp.route('/profile', methods=['GET'])
-@jwt_required()
-def get_profile():
-    """Get current user profile"""
-    try:
-        current_user_id = get_jwt_identity()
-        user = user_service.get_user_by_id(current_user_id)
-        
-        if not user:
-            return jsonify({'message': 'User not found'}), 404
-        
-        return jsonify({'user': user.to_dict()}), 200
-        
-    except Exception as e:
-        return jsonify({'message': str(e)}), 500
-
-
-@auth_bp.route('/profile', methods=['PUT'])
-@jwt_required()
-def update_profile():
-    """Update current user profile"""
-    try:
-        current_user_id = get_jwt_identity()
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'message': 'No data provided'}), 400
-        
-        # Update user through service
-        result = user_service.update_user(current_user_id, data)
-        
-        if result['success']:
-            return jsonify({
-                'message': result['message'],
-                'user': result['data']
-            }), 200
-        else:
-            return jsonify({'message': result['message']}), 400
-            
-    except Exception as e:
-        return jsonify({'message': str(e)}), 500
-
-
-@auth_bp.route('/change-password', methods=['PUT'])
-@jwt_required()
-def change_password():
-    """Change current user password"""
-    try:
-        current_user_id = get_jwt_identity()
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'message': 'No data provided'}), 400
-        
-        current_password = data.get('current_password')
-        new_password = data.get('new_password')
-        
-        if not current_password or not new_password:
-            return jsonify({'message': 'Current and new passwords are required'}), 400
-        
-        # Change password through service
-        result = user_service.change_password(current_user_id, current_password, new_password)
-        
-        if result['success']:
-            return jsonify({'message': result['message']}), 200
-        else:
-            return jsonify({'message': result['message']}), 400
-            
-    except Exception as e:
-        return jsonify({'message': str(e)}), 500
+#
+# @auth_bp.route('/profile', methods=['GET'])
+# @jwt_required()
+# def get_profile():
+#     """Get current user profile"""
+#     try:
+#         current_user_id = get_jwt_identity()
+#         user = user_service.get_user_by_id(current_user_id)
+#
+#         if not user:
+#             return jsonify({'message': 'User not found'}), 404
+#
+#         return jsonify({'user': user.to_dict()}), 200
+#
+#     except Exception as e:
+#         return jsonify({'message': str(e)}), 500
+#
+#
+# @auth_bp.route('/profile', methods=['PUT'])
+# @jwt_required()
+# def update_profile():
+#     """Update current user profile"""
+#     try:
+#         current_user_id = get_jwt_identity()
+#         data = request.get_json()
+#
+#         if not data:
+#             return jsonify({'message': 'No data provided'}), 400
+#
+#         # Update user through service
+#         result = user_service.update_user(current_user_id, data)
+#
+#         if result['success']:
+#             return jsonify({
+#                 'message': result['message'],
+#                 'user': result['data']
+#             }), 200
+#         else:
+#             return jsonify({'message': result['message']}), 400
+#
+#     except Exception as e:
+#         return jsonify({'message': str(e)}), 500
+#
+#
+# @auth_bp.route('/change-password', methods=['PUT'])
+# @jwt_required()
+# def change_password():
+#     """Change current user password"""
+#     try:
+#         current_user_id = get_jwt_identity()
+#         data = request.get_json()
+#
+#         if not data:
+#             return jsonify({'message': 'No data provided'}), 400
+#
+#         current_password = data.get('current_password')
+#         new_password = data.get('new_password')
+#
+#         if not current_password or not new_password:
+#             return jsonify({'message': 'Current and new passwords are required'}), 400
+#
+#         # Change password through service
+#         result = user_service.change_password(current_user_id, current_password, new_password)
+#
+#         if result['success']:
+#             return jsonify({'message': result['message']}), 200
+#         else:
+#             return jsonify({'message': result['message']}), 400
+#
+#     except Exception as e:
+#         return jsonify({'message': str(e)}), 500
