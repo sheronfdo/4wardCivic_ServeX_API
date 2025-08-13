@@ -68,22 +68,3 @@ def register_error_handlers(app):
     @app.errorhandler(500)
     def internal_error(error):
         return {'message': 'Internal server error'}, 500
-
-
-# def create_admin_user():
-#     """Create default admin user if it doesn't exist"""
-#     try:
-#         user_service = UserService()
-#         admin_email = os.getenv('ADMIN_EMAIL', 'admin@example.com')
-        
-#         if not user_service.find_by_email(admin_email):
-#             admin_data = {
-#                 'name': os.getenv('ADMIN_NAME', 'System Administrator'),
-#                 'email': admin_email,
-#                 'password': os.getenv('ADMIN_PASSWORD', 'admin123'),
-#                 'role': 'Admin'
-#             }
-#             user_service.create_user(admin_data)
-#             print(f"Admin user created: {admin_email}")
-#     except Exception as e:
-#         print(f"Error creating admin user: {e}")
