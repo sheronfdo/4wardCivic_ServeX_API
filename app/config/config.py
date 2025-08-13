@@ -3,7 +3,9 @@ Configuration classes for different environments
 """
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class Config:
     """Base configuration class"""
@@ -19,6 +21,20 @@ class Config:
     
     # CORS settings
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(',')
+
+    # SMTP Setting
+    MAILTRAP_HOST = os.environ.get('MAILTRAP_HOST', 'sandbox.smtp.mailtrap.io')
+    MAILTRAP_PORT = os.environ.get('MAILTRAP_PORT', 2525)
+    MAILTRAP_USERNAME = os.environ.get('MAILTRAP_USERNAME', 'c3b7e0d7963471')
+    MAILTRAP_PASSWORD =  os.environ.get('MAILTRAP_PASSWORD', '4e311449eebefa')
+    MAILTRAP_FROM_EMAIL =  os.environ.get('MAILTRAP_FROM_EMAIL', 'no-reply@servex.com')
+
+    # MinIO settings
+    MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'http://localhost:9000').strip()
+    MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', 'minioadmin')
+    MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', 'minioadmin')
+    MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'servex')
+    MINIO_SECURE = str(os.environ.get('MINIO_SECURE', 'False')).lower() in ('true', '1', 't')
 
 
 class DevelopmentConfig(Config):

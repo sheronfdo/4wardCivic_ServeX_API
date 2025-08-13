@@ -1,9 +1,10 @@
-from mongoengine import Document, StringField, DateTimeField
+from mongoengine import Document, StringField, DateTimeField, BooleanField
 from datetime import datetime
 
 class Media(Document):
     file_path = StringField(required=True)
     file_name = StringField(required=True)
+    is_public = BooleanField(default=True)
     uploaded_at = DateTimeField(default=datetime.utcnow)
 
     meta = {
@@ -15,6 +16,7 @@ class Media(Document):
             "id": str(self.id),
             "file_path": self.file_path,
             "file_name": self.file_name,
+            "is_public": self.is_public,
             "uploaded_at": self.uploaded_at.isoformat() if self.uploaded_at else None
         }
 

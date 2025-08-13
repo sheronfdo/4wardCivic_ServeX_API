@@ -6,14 +6,14 @@ from flask import current_app
 
 class MediaService:
     
-    UPLOAD_FOLDER = 'uploads'
+    # UPLOAD_FOLDER = 'uploads'
     ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'mp4', 'avi', 'mov', 'mp3', 'wav'}
     
-    @classmethod
-    def _ensure_upload_directory(cls):
-        """Ensure upload directory exists"""
-        if not os.path.exists(cls.UPLOAD_FOLDER):
-            os.makedirs(cls.UPLOAD_FOLDER)
+    # @classmethod
+    # def _ensure_upload_directory(cls):
+    #     """Ensure upload directory exists"""
+    #     if not os.path.exists(cls.UPLOAD_FOLDER):
+    #         os.makedirs(cls.UPLOAD_FOLDER)
     
     @classmethod
     def _is_allowed_file(cls, filename):
@@ -22,7 +22,7 @@ class MediaService:
                filename.rsplit('.', 1)[1].lower() in cls.ALLOWED_EXTENSIONS
     
     @classmethod
-    def upload_file(cls, file):
+    def upload_file(cls, file, is_public=True):
         """
         Upload and save media file
         
@@ -40,20 +40,26 @@ class MediaService:
                 return {'success': False, 'error': 'File type not allowed'}
             
             # Ensure upload directory exists
-            cls._ensure_upload_directory()
+            # cls._ensure_upload_directory()
             
             # Generate unique filename
             filename = secure_filename(file.filename)
             unique_filename = f"{uuid.uuid4()}_{filename}"
-            
-            # Save file
-            file_path = os.path.join(cls.UPLOAD_FOLDER, unique_filename)
-            file.save(file_path)
+            file_path = f"media/{unique_filename}"
+
+            # Upload to MinIO
+            current_app.minio_client.put_object(
+                Bucket=current_app.config['MINIO_BUCKET'],
+                Key=file_path,
+                Body=file,
+                ContentType=file.content_type
+            )
             
             # Save to database
             media_item = Media(
                 file_path=file_path,
-                file_name=filename
+                file_name=filename,
+                is_public=is_public
             )
             media_item.save()
             
@@ -141,10 +147,12 @@ class MediaService:
             
             if not media_item:
                 return {'success': False, 'error': 'Media not found'}
-            
-            # Delete file from filesystem
-            if os.path.exists(media_item.file_path):
-                os.remove(media_item.file_path)
+
+            # Delete from MinIO
+            current_app.minio_client.delete_object(
+                Bucket=current_app.config['MINIO_BUCKET'],
+                Key=media_item.file_path
+            )
             
             # Delete from database
             media_item.delete()

@@ -1,12 +1,10 @@
-"""
-Flask app factory pattern implementation
-"""
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from mongoengine import connect
 import os
-
+import boto3
+from botocore.client import Config
 from app.config.config import get_config
 from app.routes.api import api_bp
 from app.services.user_service import UserService
@@ -32,7 +30,24 @@ def create_app(config_name=None):
         db=app.config['MONGO_DATABASE'],
         host=app.config['MONGO_URI']
     )
-    
+
+    # Initialize MinIO client
+    app.minio_client = boto3.client(
+        's3',
+        endpoint_url=app.config['MINIO_ENDPOINT'],
+        aws_access_key_id=app.config['MINIO_ACCESS_KEY'],
+        aws_secret_access_key=app.config['MINIO_SECRET_KEY'],
+        config=Config(signature_version='s3v4')
+    )
+
+    # Create MinIO bucket if it doesn't exist
+    try:
+        app.minio_client.create_bucket(Bucket=app.config['MINIO_BUCKET'])
+    except app.minio_client.exceptions.BucketAlreadyExists:
+        pass
+    except Exception as e:
+        app.logger.error(f"Failed to create MinIO bucket: {str(e)}")
+
     # Register blueprints
     app.register_blueprint(api_bp, url_prefix='/api')
     

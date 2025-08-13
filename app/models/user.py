@@ -10,15 +10,17 @@ class User(Document):
     """User document model"""
     
     # User role choices
-    ROLE_CHOICES = ('Admin', 'User')
+    ROLES = ('GovAdmin', 'User')
     
     # Fields
     name = StringField(required=True, max_length=100)
     email = EmailField(required=True, unique=True)
     password = StringField(required=True)
-    role = StringField(max_length=20, choices=ROLE_CHOICES, default='User')
+    role = StringField(max_length=20, choices=ROLES, default='User')
     authority = ReferenceField(Authority)
     is_active = BooleanField(default=True)
+    verification_token = StringField()
+    is_verified = BooleanField(default=False)
     
     # Timestamps
     created_at = DateTimeField(default=datetime.utcnow)
