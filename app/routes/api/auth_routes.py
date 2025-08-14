@@ -94,10 +94,12 @@ def verify_admin_email():
     if not token:
         return jsonify({'message': 'Token is required'}), 400
     try:
-        authority_id = UserService.verify_admin_email(token)['authority_id']
+        response = UserService.verify_admin_email(token)
+        authority_id = response['authority_id']
+        user_id = response['user_id']
         if authority_id:
             AuthorityService.activate_authority(authority_id)
-        return jsonify({'message': 'Admin email verified successfully'}), 200
+        return jsonify({'message': 'Admin email verified successfully', 'user_id': user_id}), 200
     except Exception as e:
         current_app.logger.error(f"Error verifying admin email: {str(e)}")
         return jsonify({'message': str(e)}), 400
@@ -126,7 +128,7 @@ def login():
         user_data = auth_result['data']
         
         # Check if user is Admin (as per your original requirement)
-        if user_data['role'] != 'Admin':
+        if user_data['role'] != 'GovAdmin':
             return jsonify({'message': 'Access denied: Admins only'}), 403
         
         # Create access token

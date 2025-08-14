@@ -67,7 +67,8 @@ class UserService:
         user.status = "ACTIVE"
         user.save()
         response = {
-            'authority_id': str(user.authority.id) if user.authority else None
+            'authority_id': str(user.authority.id) if user.authority else None,
+            'user_id': str(user.id)
         }
         return response
 
@@ -154,7 +155,7 @@ class UserService:
             User object or None if not found
         """
         try:
-            return User.objects(email=email.lower().strip()).first()
+            return User.objects(email=email.lower().strip(), status="ACTIVE").first()
         except Exception:
             return None
     
