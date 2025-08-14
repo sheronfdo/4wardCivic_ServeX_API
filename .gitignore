@@ -10,7 +10,7 @@ instance/*
 
 ### firebase ###
 
-./firebase-adminsdk.json
+firebase-adminsdk.json
 
 
 # env files
