@@ -159,6 +159,7 @@ def validate_token():
         
     except Exception as e:
         return jsonify({'valid': False, 'message': str(e)}), 500
+    
 
 #
 # @auth_bp.route('/profile', methods=['GET'])

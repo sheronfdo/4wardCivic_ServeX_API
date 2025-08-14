@@ -1,8 +1,11 @@
 from flask import Blueprint, jsonify, request
+from bson import ObjectId
+from mongoengine.errors import DoesNotExist, ValidationError
 from app.models.dashboard import Dashboard
 from app.services.dashbord_service import DashboardService
+from app.models.user import User
 
-dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dash')
+dashboard_bp = Blueprint('dash', __name__, url_prefix='/dash')
 dashboard_service = DashboardService()
 
 @dashboard_bp.route('/total/services', methods=['GET'])
@@ -135,6 +138,33 @@ def get_dashboard_statistics():
             "success": False,
             "message": str(e)
         }), 500
+
+@dashboard_bp.route('/profile/<id>', methods=['GET'])
+def get_profile(id):
+    """
+    Get profile by ID
+    """
+    try:
+        # Validate ObjectId format
+        if not ObjectId.is_valid(id):
+            return jsonify({"error": "Invalid user ID"}), 400
+        
+        # Fetch the user
+        user = User.objects.get(id=id)
+
+        return jsonify({
+            "success": True,
+            "profile": user.to_dict()
+        }), 200
+
+    except DoesNotExist:
+        return jsonify({"error": "User not found"}), 404
+
+    except ValidationError:
+        return jsonify({"error": "Invalid user ID format"}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # Error handlers for dashboard blueprint
 @dashboard_bp.errorhandler(404)

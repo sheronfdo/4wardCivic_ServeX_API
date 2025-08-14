@@ -73,3 +73,9 @@ class AuthorityService:
         if not authority:
             raise ValueError('Authority not found')
         return authority
+    
+    def get_all(self, status_filter=None):
+        query = Authority.objects()
+        if status_filter:
+            query = query.filter(status=status_filter)
+        return list(query)

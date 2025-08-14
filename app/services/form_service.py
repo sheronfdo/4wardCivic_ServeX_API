@@ -5,6 +5,7 @@ from app.models.form import Form
 from app.models.form import Question
 from app.models.service import Service
 from app.models.media import Media
+from app.models.respose import FormResponse
 from typing import List, Optional, Dict, Any
 
 class FormService:
@@ -181,5 +182,58 @@ class FormService:
             return {
                 'success': False,
             }
-    
+    @staticmethod
+    def submit_form_response(form_id: str, responses: dict, respondent_email: str = None,
+                             ip_address: str = None, user_agent: str = None) -> dict:
+        """Store user responses for a form"""
+        try:
+            form = Form.objects.get(id=form_id)
+        except Form.DoesNotExist:
+            return {'success': False, 'message': 'Form not found'}
+        except Exception as e:
+            return {'success': False, 'message': f'Error retrieving form: {str(e)}'}
+
+        try:
+            # Create FormResponse object
+            form_response = FormResponse(
+                form=form,
+                responses=responses,
+                respondent_email=respondent_email,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                submitted_at=datetime.utcnow()
+            )
+            form_response.save()
+            return {'success': True, 'message': 'Response submitted successfully'}
+        except Exception as e:
+            return {'success': False, 'message': f'Error saving response: {str(e)}'}
+        
+    @staticmethod
+    def get_service_by_form_id(form_id: str) -> dict:
+        """Get the service related to a form using form_id"""
+        try:
+            form = Form.objects.get(id=form_id)
+
+            if not form.service:
+                return {
+                    'success': False,
+                    'message': 'No service linked to this form'
+                }
+
+            return {
+                'success': True,
+                'service': form.service.to_dict() if hasattr(form.service, "to_dict") else form.service
+            }
+
+        except Form.DoesNotExist:
+            return {
+                'success': False,
+                'message': 'Form not found'
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving service: {str(e)}'
+        }
+
    

@@ -8,7 +8,7 @@ from botocore.client import Config
 from app.config.config import get_config
 from app.routes.api import api_bp
 from app.services.user_service import UserService
-
+import json
 
 def create_app(config_name=None):
     """Application factory pattern"""
@@ -48,7 +48,29 @@ def create_app(config_name=None):
     except Exception as e:
         app.logger.error(f"Failed to create MinIO bucket: {str(e)}")
 
-    # Register blueprints
+    # Make bucket public
+    public_policy = {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": ["s3:GetObject"],
+            "Resource": [f"arn:aws:s3:::{app.config['MINIO_BUCKET']}/*"]
+        }
+        ]
+    }
+
+    try:
+        app.minio_client.put_bucket_policy(
+            Bucket=app.config['MINIO_BUCKET'],
+            Policy=json.dumps(public_policy)
+        )
+        app.logger.info(f"Bucket {app.config['MINIO_BUCKET']} is now public")
+    except Exception as e:
+        app.logger.error(f"Failed to set public policy: {str(e)}")
+        # Register blueprints
+        
     app.register_blueprint(api_bp, url_prefix='/api')
     
     # Error handlers

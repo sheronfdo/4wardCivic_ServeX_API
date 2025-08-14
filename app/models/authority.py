@@ -20,4 +20,15 @@ class Authority(Document):
         'indexes': ['email']
     }
 
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "authorityName": self.authorityName,
+            "authorityIcon": self.authorityIconId.to_dict() if self.authorityIconId else None
+        }
+    
+    def __str__(self):
+        return f'<Authority {self.authorityName}>'
+
+
     

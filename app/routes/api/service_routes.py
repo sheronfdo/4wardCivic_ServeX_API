@@ -5,7 +5,9 @@ from pathlib import Path
 from bson import ObjectId
 from bson.errors import InvalidId
 from app.services.service_service import ServiceService
+from app.services.form_service import FormService
 from app.services.media_service import MediaService
+from app.models.respose import FormResponse
 # Create Blueprint
 service_bp = Blueprint('service', __name__, url_prefix='/service')
 
@@ -179,6 +181,50 @@ def get_active_services():
         
     except Exception as e:
         return jsonify({"error": f"Failed to fetch active services: {str(e)}"}), 500
+    
+@service_bp.route('/services/requested/<email>', methods=['GET'])
+def get_requested_services_by_email(email):
+    """Get all services linked to forms submitted by this email"""
+    try:
+        # Step 1: Find all form responses from this email
+        form_responses = FormResponse.objects(respondent_email=email)
+
+        if not form_responses:
+            return jsonify({
+                "success": False,
+                "message": "No form submissions found for this email"
+            }), 404
+
+        services_list = []
+        seen_service_ids = set()
+
+        # Step 2: Loop through each response and get the service
+        for fr in form_responses:
+            form_id = str(fr.form.id) if hasattr(fr.form, "id") else str(fr.form)
+            
+            service_result = FormService.get_service_by_form_id(form_id)
+
+            if service_result["success"]:
+                service = service_result["service"]
+                service_id = str(service["id"]) if isinstance(service, dict) else str(service.id)
+
+                # Avoid duplicates
+                if service_id not in seen_service_ids:
+                    services_list.append(service)
+                    seen_service_ids.add(service_id)
+
+        return jsonify({
+            "success": True,
+            "services": services_list
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Error retrieving requested services: {str(e)}"
+        }), 500
+
+
 
 # @service_bp.route('/media/<media_id>', methods=['GET'])
 # def get_media_by_id(media_id):
