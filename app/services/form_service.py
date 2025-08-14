@@ -1,8 +1,10 @@
 from bson import ObjectId
 from datetime import datetime
 import os
-from app.models.form import Form
+from app.models.form import Form 
+from app.models.form import Question
 from app.models.service import Service
+from app.models.media import Media
 from typing import List, Optional, Dict, Any
 
 class FormService:
@@ -18,6 +20,7 @@ class FormService:
                     'success': False,
                     'message': 'Questions must be a list'
                 }
+
             # Get and validate service
             service_id = form_data.get('serviceId')
             if not service_id or not ObjectId.is_valid(service_id):
@@ -32,12 +35,34 @@ class FormService:
                     'success': False,
                     'message': 'Service not found'
                 }
-            # Create Form object
+
+            # Process questions to link media
+            processed_questions = []
+            for q in form_data.get('questions', []):
+                media_obj = None
+                if q.get('mediaId') and ObjectId.is_valid(q['mediaId']):
+                    media_obj = Media.objects(id=q['mediaId']).first()
+                processed_questions.append(
+                    Question(
+                        id=q.get('id'),
+                        type=q.get('type'),
+                        question=q.get('question'),
+                        options=q.get('options', []),
+                        required=q.get('required', False),
+                        hasOther=q.get('hasOther', False),
+                        scaleMin=q.get('scaleMin'),
+                        scaleMax=q.get('scaleMax'),
+                        minLabel=q.get('minLabel'),
+                        maxLabel=q.get('maxLabel'),
+                        media=media_obj
+                    )
+                )
+
             form = Form(
                 title=form_data.get('title'),
                 description=form_data.get('description'),
                 service=service,
-                questions=questions,
+                questions=processed_questions,
                 created_by=created_by
             )
         
@@ -48,10 +73,10 @@ class FormService:
                     'success': False,
                     'message': 'Validation failed',
                     'errors': validation_errors
-             }
+                }
         
             # Save to database
-            form.save()  # MongoEngine's save method
+            form.save()
             return {
                 'success': True,
                 'message': 'Form created successfully',
@@ -63,7 +88,7 @@ class FormService:
             return {
                 'success': False,
                 'message': f'Error creating form: {str(e)}'
-    }
+            }
         
     
 
