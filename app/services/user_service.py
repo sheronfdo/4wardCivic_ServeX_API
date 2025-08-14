@@ -6,70 +6,61 @@ from datetime import datetime
 from mongoengine import ValidationError, NotUniqueError
 from mongoengine.queryset.visitor import Q
 
+from app.models import Authority
 from app.models.user import User
+from app.utils.email import send_verification_email
 from app.utils.validators import validate_email, validate_password, validate_user_data
-
+import uuid
 
 class UserService:
     """Service class for user-related business logic"""
-
-    # def create_authority_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
-    #     try:
-    #         # Validate input data
-    #         validation_result = validate_user_data(user_data)
-    #         if not validation_result['valid']:
-    #             return {
-    #                 'success': False,
-    #                 'message': validation_result['message']
-    #             }
-            
-    #         # Check if user already exists
-    #         if self.find_by_email(user_data['email']):
-    #             return {
-    #                 'success': False,
-    #                 'message': 'User with this email already exists'
-    #             }
-            
-    #         # Validate authority_id if provided
-    #         authority = None
-    #         if user_data.get('authority_id'):
-    #             authority = Authority.objects(id=user_data['authority_id']).first()
-    #             if not authority:
-    #                 return {'success': False, 'message': 'Invalid authority ID'}
-
-    #         user = User(
-    #             email=user_data['email'].lower().strip(),
-    #             role=user_data.get('role', 'Admin'),
-    #             authority_id=authority
-    #         )
-    #         user.set_password(user_data['password'])
-    #         user.save()
-    #         return {'success': True, 'data': {'id': str(user.id), 'email': user.email}}
-    #     except ValidationError as e:
-    #         return {'success': False, 'message': str(e)}
-    #     except Exception as e:
-    #      return {'success': False, 'message': 'Server error'}
         
     def create_authority_user(data):
+        """Create Government authority user"""
         try:
             if not data.get('authority'):
                 return {'success': False, 'message': 'Admin role requires an authority'}
-  
 
+            if User.objects(email=data['email'].lower().strip()).first():
+                raise ValueError('Email already registered')
+
+            authority_obj = Authority.objects.get(id=data['authority'])
+            token = None
+            if data['email'].lower().strip() != authority_obj.email:
+                token = str(uuid.uuid4())
             user = User(
                 name=data.get('name', 'Authority Admin'),
                 email=data['email'].lower().strip(),
-                role =data.get('role', 'Admin'),
-                authority=data['authority'] 
+                role =data.get('role', 'GovAdmin'),
+                authority=authority_obj,
+                verification_token=token,
+                is_verified=(data['email'].lower().strip() == authority_obj.email),
+                status="PENDING"
             )
             user.set_password(data['password'])
             user.save()
-            return {'success': True, 'data': {'id': str(user.id), 'email': user.email}}
+            if token:
+                send_verification_email(data['email'], data['name'], token, is_authority=False)
+            return {'success': True, 'data': {'id': str(user.id), 'email': user.email}, 'is_verified': user.is_verified}
         except ValidationError as e:
             return {'success': False, 'message': str(e)}
         except Exception as e:
          return {'success': False, 'message': f'Unexpected error: {str(e)}'}
-    
+
+    def verify_admin_email(token):
+        user = User.objects(verification_token=token, is_verified=False).first()
+        if not user:
+            raise ValueError('Invalid or expired token')
+        user.is_verified = True
+        user.verification_token = None
+        user.status = "ACTIVE"
+        user.save()
+        response = {
+            'authority_id': str(user.authority.id) if user.authority else None
+        }
+        print(response)
+        return response
+
     def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Create a new user

@@ -5,6 +5,8 @@ from datetime import datetime
 from mongoengine import Document, StringField, EmailField, DateTimeField, BooleanField,ReferenceField
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.models.authority import Authority
+from app.models.status import STATUS
+
 
 class User(Document):
     """User document model"""
@@ -17,10 +19,11 @@ class User(Document):
     email = EmailField(required=True, unique=True)
     password = StringField(required=True)
     role = StringField(max_length=20, choices=ROLES, default='User')
-    authority = ReferenceField(Authority)
+    authority = ReferenceField(Authority, required=True)
     is_active = BooleanField(default=True)
     verification_token = StringField()
     is_verified = BooleanField(default=False)
+    status = StringField(required=True, choices=STATUS)
     
     # Timestamps
     created_at = DateTimeField(default=datetime.utcnow)
@@ -67,7 +70,7 @@ class User(Document):
     
     def is_admin(self):
         """Check if user is admin"""
-        return self.role == 'Admin'
+        return self.role == 'GovAdmin'
 
     
     def clean(self):
@@ -76,7 +79,7 @@ class User(Document):
         self.name = self.name.strip() if self.name else ''
         self.updated_at = datetime.utcnow()
 
-        if self.role != 'Admin':
+        if self.role != 'GovAdmin':
             self.authority = None
         elif not self.authority:
          raise ValueError("Admin role requires an authority.")

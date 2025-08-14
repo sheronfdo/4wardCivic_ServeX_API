@@ -36,6 +36,9 @@ class Config:
     MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'servex')
     MINIO_SECURE = str(os.environ.get('MINIO_SECURE', 'False')).lower() in ('true', '1', 't')
 
+    # MinIO settings
+    FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000').strip()
+
 
 class DevelopmentConfig(Config):
     """Development configuration"""

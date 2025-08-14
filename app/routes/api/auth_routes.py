@@ -1,7 +1,7 @@
 """
 Authentication routes
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 
 from app.services.user_service import UserService
@@ -17,51 +17,92 @@ def register_authority():
     data = request.get_json()
     if not data:
         return jsonify({'message': 'No data provided'}), 400
+    try:
+        authority_id = AuthorityService.create_authority(
+            data['authorityName'],
+            data['email'],
+            data['address'],
+            data['phoneNumber'],
+            data['hotline'],
+            data['authorityIconId']
+        )
+        return jsonify({
+            'message': 'Authority registered. Verification email sent.',
+            'authority_id': authority_id
+        }), 201
+    except Exception as e:
+        current_app.logger.error(f"Error registering authority: {str(e)}")
+        return jsonify({'message': str(e)}), 400
 
-    authority_id = AuthorityService.create_authority(
-        data['authorityName'],
-        data['email'],
-        data['address'],
-        data['phoneNumber'],
-        data['hotline'],
-        data.get('authorityIconId')
-    )
-    return jsonify({'id': authority_id}), 201
+@auth_bp.route('/authority/verify-email', methods=['GET'])
+def verify_authority_email():
+    token = request.args.get('token')
+    if not token:
+        return jsonify({'message': 'Token is required'}), 400
+
+    try:
+        authority_id = AuthorityService.verify_email(token)
+        return jsonify({'message': 'Email verified successfully', 'authority_id': authority_id}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error verifying authority email: {str(e)}")
+        return jsonify({'message': str(e)}), 400
 
 @auth_bp.route('/authority/admin/register', methods=['POST'])
 def register_authority_admin():
     data = request.get_json()
     authority_obj = None
 
+    authority_id = data.get('authority_id')
+    email = data.get('email')
+    password = data.get('password')
+    name = data.get('name', 'Admin')
+
+    if not all([authority_id, email, password, name]):
+        return jsonify({'message': 'Missing required fields'}), 400
+
     # Get authority by ID
-    if data.get('authority_id'):
-        authority_obj = Authority.objects(id=data['authority_id']).first()
+    if authority_id:
+        authority_obj = Authority.objects(id=authority_id).first()
         if not authority_obj:
             return jsonify({'message': 'Invalid authority ID'}), 400
 
-    # Or get authority by email
-    elif data.get('authority_email'):
-        authority_obj = Authority.objects(email=data['authority_email']).first()
-        if not authority_obj:
-            return jsonify({'message': 'Authority with given email not found'}), 404
-
     # No authority provided at all
     else:
-        return jsonify({'message': 'Authority ID or email is required'}), 400
-
+        return jsonify({'message': 'Authority ID is required'}), 400
+    try:
     # Create admin user
-    result = UserService.create_authority_user({
-        'name': data.get('name', 'Authority Admin'),
-        'email': data['email'],
-        'password': data['password'],
-        'authority': authority_obj  # pass object, not ID
-    })
+        result = UserService.create_authority_user({
+            'name': data.get('name', 'Authority Admin'),
+            'email': data['email'],
+            'password': data['password'],
+            'authority': authority_id  # pass object, not ID
+        })
+        if result['success']:
+            return jsonify({'message': 'Admin registered. Verification email sent if needed.',
+                            'user': result['data'],
+                            'is_verification_needed': not(result['is_verified'])}), 201
+        else:
+            return jsonify({'message': result['message']}), 400
 
-    if result['success']:
-        return jsonify({'message': 'Admin registered', 'user': result['data']}), 201
-    else:
-        return jsonify({'message': result['message']}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error registering admin: {str(e)}")
+        return jsonify({'message': str(e)}), 400
 
+@auth_bp.route('/authority/admin/verify-email', methods=['GET'])
+def verify_admin_email():
+    token = request.args.get('token')
+    if not token:
+        return jsonify({'message': 'Token is required'}), 400
+    try:
+        authority_id = UserService.verify_admin_email(token)['authority_id']
+        print(authority_id)
+        if authority_id:
+            print(authority_id)
+            AuthorityService.activate_authority(authority_id)
+        return jsonify({'message': 'Admin email verified successfully'}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error verifying admin email: {str(e)}")
+        return jsonify({'message': str(e)}), 400
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
