@@ -38,6 +38,17 @@ class UserService:
                 status="PENDING"
             )
             user.set_password(data['password'])
+
+            if user.is_verified:
+                user.is_verified = True
+                user.verification_token = None
+                user.status = "ACTIVE"
+                authority = Authority.objects(id=data['authority']).first()
+                if not authority:
+                    raise ValueError('Authority not found')
+                authority.status = "ACTIVE"
+                authority.save()
+
             user.save()
             if token:
                 send_verification_email(data['email'], data['name'], token, is_authority=False)
