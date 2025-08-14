@@ -32,7 +32,7 @@ def send_verification_email(email, authority_name, verification_token, is_author
             Best regards,
             ServeX Team
             """
-
+        print(f"Sending verification email to {body}")
         # Create MIME message
         msg = MIMEMultipart()
         msg['From'] = smtp_config['from_email']

@@ -50,7 +50,7 @@ def get_all_services():
     except Exception as e:
         return jsonify({"error": f"Failed to fetch services: {str(e)}"}), 500
 
-@service_bp.route('/service/<service_id>', methods=['GET'])
+@service_bp.route('/services/<service_id>', methods=['GET'])
 def get_service_by_id(service_id):
     """
     Get a specific service by ID

@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.services.form_service import FormService
+from app.models.service import Service
+from app.models.form import Form
 import re
 
 # Create blueprint for form routes
@@ -43,6 +45,42 @@ def create_form():
             'success': False,
             'message': f'Server error: {str(e)}'
         }), 500
+
+
+@form_bp.route('/forms/<service_id>', methods=['GET'])
+def get_forms_by_service(service_id):
+    """Get all forms for a specific service"""
+    try:
+        # Validate ObjectId
+        if not validate_object_id(service_id):
+            return jsonify({
+                'success': False,
+                'message': 'Invalid service ID format'
+            }), 400
+
+        # Check if service exists
+        service = Service.objects(id=service_id).first()
+        if not service:
+            return jsonify({
+                'success': False,
+                'message': 'Service not found'
+            }), 404
+
+        # Get forms linked to this service
+        forms = Form.objects(service=service)
+
+        return jsonify({
+            'success': True,
+            'count': len(forms),
+            'forms': [form.to_dict() for form in forms]
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }), 500
+
 
 @form_bp.route('/<form_id>', methods=['GET'])
 def get_form(form_id):

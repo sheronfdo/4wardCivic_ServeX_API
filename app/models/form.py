@@ -1,10 +1,12 @@
-from mongoengine import Document, StringField, ListField, BooleanField, DateTimeField, DictField
+from mongoengine import Document, StringField, ListField, BooleanField, DateTimeField, DictField, ReferenceField
 from datetime import datetime
 from app.models.media import Media
+from app.models.service import Service
 
 class Form(Document):
     title = StringField(required=True, max_length=255)
     description = StringField()
+    service = ReferenceField(Service, required=True)
     questions = ListField(DictField())  # Changed to store dictionaries for each question
     is_active = BooleanField(default=True)
     created_by = StringField()
@@ -28,6 +30,7 @@ class Form(Document):
             "id": str(self.id),
             "title": self.title,
             "description": self.description,
+            "service_id": str(self.service.id) if self.service else None,
             "questions": self.questions,
             "is_active": self.is_active,
             "created_by": self.created_by,

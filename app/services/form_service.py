@@ -2,7 +2,8 @@ from bson import ObjectId
 from datetime import datetime
 import os
 from app.models.form import Form
-
+from app.models.service import Service
+from typing import List, Optional, Dict, Any
 
 class FormService:
     
@@ -17,11 +18,25 @@ class FormService:
                     'success': False,
                     'message': 'Questions must be a list'
                 }
+            # Get and validate service
+            service_id = form_data.get('serviceId')
+            if not service_id or not ObjectId.is_valid(service_id):
+                return {
+                    'success': False,
+                    'message': 'Valid serviceId is required'
+                }
 
+            service = Service.objects(id=service_id).first()
+            if not service:
+                return {
+                    'success': False,
+                    'message': 'Service not found'
+                }
             # Create Form object
             form = Form(
                 title=form_data.get('title'),
                 description=form_data.get('description'),
+                service=service,
                 questions=questions,
                 created_by=created_by
             )
@@ -49,7 +64,9 @@ class FormService:
                 'success': False,
                 'message': f'Error creating form: {str(e)}'
     }
+        
     
+
     @staticmethod
     def get_form_by_id(form_id):
         """Get form by ID"""
