@@ -1,20 +1,17 @@
 from flask import Blueprint, request, jsonify, current_app
-import os
-import uuid
-from pathlib import Path
-from bson import ObjectId
-from bson.errors import InvalidId
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.service_service import ServiceService
 from app.services.form_service import FormService
-from app.services.media_service import MediaService
 from app.models.respose import FormResponse
+from app.utils.decorators import role_required
+
 # Create Blueprint
 service_bp = Blueprint('service', __name__, url_prefix='/service')
 
-
-
 # Service CRUD endpoints
 @service_bp.route('/create', methods=['POST'])
+@jwt_required()
+@role_required('GovAdmin')
 def create_service():
     """
     Create a new service
@@ -35,6 +32,8 @@ def create_service():
         return jsonify({"error": f"Failed to create service: {str(e)}"}), 500
 
 @service_bp.route('/services', methods=['GET'])
+@jwt_required()
+@role_required('GovAdmin')
 def get_all_services():
     """
     Get all services with optional filtering
@@ -54,6 +53,8 @@ def get_all_services():
     
 
 @service_bp.route('/services/<service_id>', methods=['GET'])
+@jwt_required()
+@role_required('GovAdmin')
 def get_service_by_id(service_id):
     """
     Get a specific service by ID
@@ -73,6 +74,8 @@ def get_service_by_id(service_id):
         return jsonify({"error": f"Failed to fetch service: {str(e)}"}), 500
 
 @service_bp.route('/service/<service_id>', methods=['PUT'])
+@jwt_required()
+@role_required('GovAdmin')
 def update_service(service_id):
     """
     Update an existing service
@@ -102,6 +105,8 @@ def update_service(service_id):
         return jsonify({"error": f"Failed to update service: {str(e)}"}), 500
 
 @service_bp.route('/service/<service_id>', methods=['DELETE'])
+@jwt_required()
+@role_required('GovAdmin')
 def delete_service(service_id):
     """
     Delete a service
@@ -123,6 +128,8 @@ def delete_service(service_id):
         return jsonify({"error": f"Failed to delete service: {str(e)}"}), 500
 
 @service_bp.route('/service/<service_id>/status', methods=['PATCH'])
+@jwt_required()
+@role_required('GovAdmin')
 def update_service_status(service_id):
     """
     Update service status (Active/Inactive)
@@ -150,6 +157,8 @@ def update_service_status(service_id):
         return jsonify({"error": f"Failed to update service status: {str(e)}"}), 500
 
 @service_bp.route('/services/search', methods=['GET'])
+@jwt_required()
+@role_required('GovAdmin')
 def search_services():
     """
     Search services by name or note
@@ -169,6 +178,8 @@ def search_services():
         return jsonify({"error": f"Failed to search services: {str(e)}"}), 500
 
 @service_bp.route('/services/active', methods=['GET'])
+@jwt_required()
+@role_required('GovAdmin')
 def get_active_services():
     """
     Get all active services
@@ -183,6 +194,8 @@ def get_active_services():
         return jsonify({"error": f"Failed to fetch active services: {str(e)}"}), 500
     
 @service_bp.route('/services/requested/<email>', methods=['GET'])
+@jwt_required()
+@role_required('GovAdmin')
 def get_requested_services_by_email(email):
     """Get all services linked to forms submitted by this email"""
     try:
