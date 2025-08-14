@@ -1,13 +1,17 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,flask,visualstudiocode,pycharm
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,flask,visualstudiocode,pycharm
 
-firebase-adminsdk.json
 
 ### Flask ###
 instance/*
 !instance/.gitignore
 .webassets-cache
 .env
+
+### firebase ###
+
+./firebase-adminsdk.json
+
 
 # env files
 .env
