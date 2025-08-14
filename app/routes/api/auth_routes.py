@@ -95,9 +95,7 @@ def verify_admin_email():
         return jsonify({'message': 'Token is required'}), 400
     try:
         authority_id = UserService.verify_admin_email(token)['authority_id']
-        print(authority_id)
         if authority_id:
-            print(authority_id)
             AuthorityService.activate_authority(authority_id)
         return jsonify({'message': 'Admin email verified successfully'}), 200
     except Exception as e:

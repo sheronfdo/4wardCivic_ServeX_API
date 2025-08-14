@@ -58,7 +58,6 @@ class UserService:
         response = {
             'authority_id': str(user.authority.id) if user.authority else None
         }
-        print(response)
         return response
 
     def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
