@@ -13,13 +13,18 @@ class User(Document):
     
     # User role choices
     ROLES = ('GovAdmin', 'Citizen')
+    ID_TYPES = ('NIC', 'PASSPORT', 'DRIVING_LICENSE')
     
     # Fields
-    name = StringField(required=True, max_length=100)
+    name = StringField(required=True, max_length=200)
+    fullname = StringField(required=False, max_length=200)
+    id_type = StringField(required=False, choices=ID_TYPES, max_length=100)
+    id_number = StringField(required=False, max_length=100)
+    phone_number = StringField(required=False, max_length=20)
     email = EmailField(required=True, unique=True)
-    password = StringField(required=True)
-    role = StringField(max_length=20, choices=ROLES, default='User')
-    authority = ReferenceField(Authority, required=True)
+    password = StringField(required=False)
+    role = StringField(max_length=20, choices=ROLES)
+    authority = ReferenceField(Authority, required=False)
     is_active = BooleanField(default=True)
     verification_token = StringField()
     is_verified = BooleanField(default=False)

@@ -5,6 +5,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 
 from app.services.user_service import UserService
+from app.utils.decorators import role_required
 from app.utils.validators import validate_user_data
 from app.services.authority_service import AuthorityService
 from app.models.authority import Authority
@@ -115,7 +116,14 @@ def firebase_login():
             return jsonify({'message': 'Missing or invalid Authorization header'}), 401
 
         id_token = auth_header.split('Bearer ')[1]
-        decoded_token = auth.verify_id_token(id_token)
+        try:
+            decoded_token = auth.verify_id_token(id_token)
+        except auth.InvalidIdTokenError as e:
+            current_app.logger.error(f"Invalid Firebase ID token: {str(e)}")
+            return jsonify({'message': 'Invalid Firebase ID token'}), 401
+        except auth.ExpiredIdTokenError as e:
+            current_app.logger.error(f"Firebase ID token has expired: {str(e)}")
+            return jsonify({'message': 'Firebase ID token has expired'}), 401
         firebase_uid = decoded_token['uid']
         email = decoded_token.get('email')
         name = decoded_token.get('name', email.split('@')[0])
@@ -126,7 +134,6 @@ def firebase_login():
         user = user_service.find_by_email(email)
         signup_required = False
         if not user:
-            signup_required = True
             # Create a new user with role 'User'
             user_data = {
                 'name': name,
@@ -141,6 +148,9 @@ def firebase_login():
                 return jsonify({'message': create_result['message']}), 400
             user = user_service.find_by_email(email)
 
+        if not user.fullname or not user.id_type or not user.id_number or not user.phone_number:
+            signup_required = True
+
         # if not user.is_active:
         #     return jsonify({'message': 'Account is deactivated'}), 403
 
@@ -152,13 +162,39 @@ def firebase_login():
             'user': user.to_dict(),
             'is_signup_required':signup_required
         }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error during Firebase login: {str(e)}")
+        return jsonify({'message': f'Login failed: {str(e)}'}), 500
 
-    except auth.InvalidIdTokenError as e:
-        current_app.logger.error(f"Invalid Firebase ID token: {str(e)}")
-        return jsonify({'message': 'Invalid Firebase ID token'}), 401
-    except auth.ExpiredIdTokenError as e:
-        current_app.logger.error(f"Firebase ID token has expired: {str(e)}")
-        return jsonify({'message': 'Firebase ID token has expired'}), 401
+
+@auth_bp.route('/citizen-registration', methods=['POST'])
+@jwt_required()
+@role_required('Citizen')
+def citizen_registration():
+    """Handle Firebase Google Sign-In and issue custom JWT"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'message': 'No data provided'}), 400
+
+        citizen_id = data['citizen_id']
+        fullname = data['fullname']
+        id_type = data['id_type']
+        id_number = data['id_number']
+        phone_number = data['phone_number']
+
+        user_data = {
+            'citizen_id':citizen_id,
+            'fullname':fullname,
+            'id_type': id_type,
+            'id_number': id_number,
+            'phone_number': phone_number,
+        }
+
+        result = user_service.citizen_registration_details(user_data)
+        if not result['success']:
+            return jsonify({'message': result['message']}), 400
+        return jsonify({'success':True, }), 200
     except Exception as e:
         current_app.logger.error(f"Error during Firebase login: {str(e)}")
         return jsonify({'message': f'Login failed: {str(e)}'}), 500
