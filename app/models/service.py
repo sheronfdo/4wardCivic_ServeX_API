@@ -12,11 +12,13 @@ class Service(Document):
     slot_duration = IntField(required=True)  # in minutes
     max_people_per_slot = IntField(required=True, default=1)
     kyc = BooleanField(default=False)
+    physicalAttendance = BooleanField(default=False)
     service_icon = ReferenceField(Media, reverse_delete_rule=PULL)
     authority = ReferenceField(Authority)
     status = StringField(default="Active", choices=["Active", "Inactive"])
     created_at = DateTimeField(default=datetime.utcnow)
     updated_at = DateTimeField(default=datetime.utcnow)
+
     
     meta = {
         'collection': 'services',
@@ -40,6 +42,7 @@ class Service(Document):
             "slot_duration": self.slot_duration,
             "max_people_per_slot": self.max_people_per_slot,
             "kyc": self.kyc,
+            "physicalAttendance": self.physicalAttendance,
             "service_icon_id": str(self.service_icon.id) if self.service_icon else None,
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,

@@ -55,6 +55,7 @@ class ServiceService:
             slot_duration=int(service_data['slotduration']),
             max_people_per_slot=int(service_data.get('maxPeoplePerSlot', 1)),
             kyc=bool(service_data.get('kyc', False)),
+            physicalAttendance=bool(service_data.get('isPhysicalAttendance', False)),
             service_icon=service_icon,
             authority=authority,
             status=service_data.get('status', 'Active')
