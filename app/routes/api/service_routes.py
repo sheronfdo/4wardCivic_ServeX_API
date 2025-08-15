@@ -374,6 +374,21 @@ def get_requested_services():
             "message": f"Error retrieving requested services: {str(e)}"
         }), 500
 
+@service_bp.route('/service/avilibleslot', methods=['GET'])
+# GovAdmin API
+@jwt_required()
+@role_required('GovAdmin')
+def get_avilable_slot():
+    """Get all avilible slot details"""
+    try:
+        service_service = ServiceService()
+        data = request.get_json()
+        services = service_service.get_available_slots(data.get("service_id"), data.get("date_to_check"), 5)
+        
+        return jsonify(services), 200
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch active services: {str(e)}"}), 500
 
 
 # @service_bp.route('/media/<media_id>', methods=['GET'])
