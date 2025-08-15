@@ -12,7 +12,7 @@ class User(Document):
     """User document model"""
     
     # User role choices
-    ROLES = ('GovAdmin', 'User')
+    ROLES = ('GovAdmin', 'Citizen')
     
     # Fields
     name = StringField(required=True, max_length=100)

@@ -8,6 +8,7 @@ from app.services.user_service import UserService
 from app.utils.validators import validate_user_data
 from app.services.authority_service import AuthorityService
 from app.models.authority import Authority
+from firebase_admin import auth
 
 auth_bp = Blueprint('auth', __name__)
 user_service = UserService()
@@ -103,6 +104,64 @@ def verify_admin_email():
     except Exception as e:
         current_app.logger.error(f"Error verifying admin email: {str(e)}")
         return jsonify({'message': str(e)}), 400
+
+
+@auth_bp.route('/firebase-login', methods=['POST'])
+def firebase_login():
+    """Handle Firebase Google Sign-In and issue custom JWT"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'message': 'Missing or invalid Authorization header'}), 401
+
+        id_token = auth_header.split('Bearer ')[1]
+        decoded_token = auth.verify_id_token(id_token)
+        firebase_uid = decoded_token['uid']
+        email = decoded_token.get('email')
+        name = decoded_token.get('name', email.split('@')[0])
+
+        if not email:
+            return jsonify({'message': 'Email not found in Firebase token'}), 400
+
+        user = user_service.find_by_email(email)
+        signup_required = False
+        if not user:
+            signup_required = True
+            # Create a new user with role 'User'
+            user_data = {
+                'name': name,
+                'email': email,
+                'role': 'Citizen',
+                'password': '',  # No password for Firebase users
+                'is_verified': True,  # Firebase verifies email
+                'status': 'ACTIVE'
+            }
+            create_result = user_service.create_citizen_user(user_data)
+            if not create_result['success']:
+                return jsonify({'message': create_result['message']}), 400
+            user = user_service.find_by_email(email)
+
+        # if not user.is_active:
+        #     return jsonify({'message': 'Account is deactivated'}), 403
+
+        # Issue custom JWT token
+        access_token = create_access_token(identity=str(user.id))
+
+        return jsonify({
+            'token': access_token,
+            'user': user.to_dict(),
+            'is_signup_required':signup_required
+        }), 200
+
+    except auth.InvalidIdTokenError as e:
+        current_app.logger.error(f"Invalid Firebase ID token: {str(e)}")
+        return jsonify({'message': 'Invalid Firebase ID token'}), 401
+    except auth.ExpiredIdTokenError as e:
+        current_app.logger.error(f"Firebase ID token has expired: {str(e)}")
+        return jsonify({'message': 'Firebase ID token has expired'}), 401
+    except Exception as e:
+        current_app.logger.error(f"Error during Firebase login: {str(e)}")
+        return jsonify({'message': f'Login failed: {str(e)}'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():

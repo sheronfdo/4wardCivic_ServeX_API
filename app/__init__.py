@@ -8,6 +8,7 @@ from botocore.client import Config
 from app.config.config import get_config
 from app.routes.api import api_bp
 from app.services.user_service import UserService
+from firebase_admin import credentials, initialize_app
 import json
 
 def create_app(config_name=None):
@@ -24,7 +25,11 @@ def create_app(config_name=None):
     # Initialize extensions
     CORS(app, origins=app.config['CORS_ORIGINS'])
     JWTManager(app)
-    
+
+    # Firebase connection
+    firebase_cred = credentials.Certificate(os.path.join(os.path.dirname(__file__), '../firebase-adminsdk.json'))
+    initialize_app(firebase_cred)
+
     # Initialize database
     connect(
         db=app.config['MONGO_DATABASE'],
