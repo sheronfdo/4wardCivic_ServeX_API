@@ -11,10 +11,12 @@ from app.models.user import User
 from app.utils.email import send_verification_email
 from app.utils.validators import validate_email, validate_password, validate_user_data
 import uuid
+from bson.errors import InvalidId
+
 
 class UserService:
     """Service class for user-related business logic"""
-        
+
     def create_authority_user(data):
         """Create Government authority user"""
         try:
@@ -31,7 +33,7 @@ class UserService:
             user = User(
                 name=data.get('name', 'Authority Admin'),
                 email=data['email'].lower().strip(),
-                role =data.get('role', 'GovAdmin'),
+                role=data.get('role', 'GovAdmin'),
                 authority=authority_obj,
                 verification_token=token,
                 is_verified=(data['email'].lower().strip() == authority_obj.email),
@@ -56,7 +58,7 @@ class UserService:
         except ValidationError as e:
             return {'success': False, 'message': str(e)}
         except Exception as e:
-         return {'success': False, 'message': f'Unexpected error: {str(e)}'}
+            return {'success': False, 'message': f'Unexpected error: {str(e)}'}
 
     def verify_admin_email(token):
         user = User.objects(verification_token=token, is_verified=False).first()
@@ -71,6 +73,28 @@ class UserService:
             'user_id': str(user.id)
         }
         return response
+
+    def create_citizen_user(data):
+        """Create Government authority user"""
+        try:
+            if User.objects(email=data['email'].lower().strip()).first():
+                raise ValueError('Email already registered')
+
+            user = User(
+                name=data.get('name', 'Authority Admin'),
+                email=data['email'].lower().strip(),
+                role=data.get('role', 'Citizen'),
+                authority=None,
+                is_verified=True,
+                status="PENDING"
+            )
+            user.save()
+
+            return {'success': True, 'data': {'id': str(user.id), 'email': user.email}}
+        except ValidationError as e:
+            return {'success': False, 'message': str(e)}
+        except Exception as e:
+            return {'success': False, 'message': f'Unexpected error: {str(e)}'}
 
     def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -90,14 +114,14 @@ class UserService:
                     'success': False,
                     'message': validation_result['message']
                 }
-            
+
             # Check if user already exists
             if self.find_by_email(user_data['email']):
                 return {
                     'success': False,
                     'message': 'User with this email already exists'
                 }
-            
+
             # Create new user
             user = User(
                 name=user_data['name'],
@@ -106,13 +130,13 @@ class UserService:
             )
             user.set_password(user_data['password'])
             user.save()
-            
+
             return {
                 'success': True,
                 'message': 'User created successfully',
                 'data': user.to_dict()
             }
-            
+
         except NotUniqueError:
             return {
                 'success': False,
@@ -128,7 +152,7 @@ class UserService:
                 'success': False,
                 'message': f'Error creating user: {str(e)}'
             }
-    
+
     def get_user_by_id(self, user_id: str) -> Optional[User]:
         """
         Get user by ID
@@ -143,7 +167,7 @@ class UserService:
             return User.objects(id=user_id).first()
         except Exception:
             return None
-    
+
     def find_by_email(self, email: str) -> Optional[User]:
         """
         Find user by email
@@ -158,7 +182,7 @@ class UserService:
             return User.objects(email=email.lower().strip(), status="ACTIVE").first()
         except Exception:
             return None
-    
+
     def authenticate_user(self, email: str, password: str) -> Dict[str, Any]:
         """
         Authenticate user with email and password
@@ -177,34 +201,34 @@ class UserService:
                     'success': False,
                     'message': 'Invalid email or password'
                 }
-            
+
             if not user.check_password(password):
                 return {
                     'success': False,
                     'message': 'Invalid email or password'
                 }
-            
+
             if not user.is_active:
                 return {
                     'success': False,
                     'message': 'Account is deactivated'
                 }
-            
+
             # Update last login
             user.update_last_login()
-            
+
             return {
                 'success': True,
                 'message': 'Authentication successful',
                 'data': user.to_dict()
             }
-            
+
         except Exception as e:
             return {
                 'success': False,
                 'message': f'Authentication error: {str(e)}'
             }
-    
+
     def update_user(self, user_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Update user information
@@ -223,10 +247,10 @@ class UserService:
                     'success': False,
                     'message': 'User not found'
                 }
-            
+
             # Allowed fields to update
             allowed_fields = ['name', 'email', 'role', 'is_active']
-            
+
             # Validate and update fields
             for field, value in update_data.items():
                 if field in allowed_fields:
@@ -251,16 +275,16 @@ class UserService:
                         user.role = value
                     else:
                         setattr(user, field, value)
-            
+
             user.updated_at = datetime.utcnow()
             user.save()
-            
+
             return {
                 'success': True,
                 'message': 'User updated successfully',
                 'data': user.to_dict()
             }
-            
+
         except ValidationError as e:
             return {
                 'success': False,
@@ -271,7 +295,7 @@ class UserService:
                 'success': False,
                 'message': f'Error updating user: {str(e)}'
             }
-    
+
     def delete_user(self, user_id: str) -> Dict[str, Any]:
         """
         Delete user by ID
@@ -289,20 +313,20 @@ class UserService:
                     'success': False,
                     'message': 'User not found'
                 }
-            
+
             user.delete()
-            
+
             return {
                 'success': True,
                 'message': 'User deleted successfully'
             }
-            
+
         except Exception as e:
             return {
                 'success': False,
                 'message': f'Error deleting user: {str(e)}'
             }
-    
+
     def get_all_users(self, page: int = 1, limit: int = 10, search: str = None, role: str = None) -> Dict[str, Any]:
         """
         Get paginated list of users with optional filtering
@@ -319,24 +343,24 @@ class UserService:
         try:
             # Build query
             query = User.objects()
-            
+
             # Apply filters
             if search:
                 query = query.filter(
                     Q(name__icontains=search) | Q(email__icontains=search)
                 )
-            
+
             if role and role in User.ROLE_CHOICES:
                 query = query.filter(role=role)
-            
+
             # Calculate pagination
             total = query.count()
             skip = (page - 1) * limit
             users = query.skip(skip).limit(limit)
-            
+
             # Convert to dictionaries
             users_data = [user.to_dict() for user in users]
-            
+
             return {
                 'success': True,
                 'data': {
@@ -349,13 +373,13 @@ class UserService:
                     }
                 }
             }
-            
+
         except Exception as e:
             return {
                 'success': False,
                 'message': f'Error retrieving users: {str(e)}'
             }
-    
+
     def change_password(self, user_id: str, current_password: str, new_password: str) -> Dict[str, Any]:
         """
         Change user password
@@ -375,14 +399,14 @@ class UserService:
                     'success': False,
                     'message': 'User not found'
                 }
-            
+
             # Verify current password
             if not user.check_password(current_password):
                 return {
                     'success': False,
                     'message': 'Current password is incorrect'
                 }
-            
+
             # Validate new password
             password_validation = validate_password(new_password)
             if not password_validation['valid']:
@@ -390,23 +414,23 @@ class UserService:
                     'success': False,
                     'message': password_validation['message']
                 }
-            
+
             # Update password
             user.set_password(new_password)
             user.updated_at = datetime.utcnow()
             user.save()
-            
+
             return {
                 'success': True,
                 'message': 'Password changed successfully'
             }
-            
+
         except Exception as e:
             return {
                 'success': False,
                 'message': f'Error changing password: {str(e)}'
             }
-    
+
     def toggle_user_status(self, user_id: str) -> Dict[str, Any]:
         """
         Toggle user active status
@@ -424,24 +448,24 @@ class UserService:
                     'success': False,
                     'message': 'User not found'
                 }
-            
+
             user.is_active = not user.is_active
             user.updated_at = datetime.utcnow()
             user.save()
-            
+
             status = 'activated' if user.is_active else 'deactivated'
             return {
                 'success': True,
                 'message': f'User {status} successfully',
                 'data': user.to_dict()
             }
-            
+
         except Exception as e:
             return {
                 'success': False,
                 'message': f'Error updating user status: {str(e)}'
             }
-    
+
     def get_user_stats(self) -> Dict[str, Any]:
         """
         Get user statistics
@@ -454,7 +478,7 @@ class UserService:
             active_users = User.objects(is_active=True).count()
             admin_users = User.objects(role='Admin').count()
             regular_users = User.objects(role='User').count()
-            
+
             return {
                 'success': True,
                 'data': {
@@ -465,7 +489,7 @@ class UserService:
                     'regular_users': regular_users
                 }
             }
-            
+
         except Exception as e:
             return {
                 'success': False,
