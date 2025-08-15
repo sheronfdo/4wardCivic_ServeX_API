@@ -5,6 +5,7 @@ from bson.errors import InvalidId
 import re
 from app.models.media import Media
 from app.models.service import Service
+from app.models.authority import Authority 
 
 DUMMY_DATE = datetime(2025, 1, 1)
 
@@ -19,13 +20,23 @@ class ServiceService:
         Create a new service
         """
         # Validate required fields
-        required_fields = ['serviceName', 'serviceFeeLRK', 'slotduration']
+        required_fields = ['serviceName', 'serviceFeeLRK', 'slotduration', 'authority_id']
         for field in required_fields:
             if field not in service_data or service_data[field] is None or service_data[field] == '':
                 raise ValueError(f"Missing required field: {field}")
         
+        # Validate and get authority
+        authority = None
+        try:
+            authority = Authority.objects(id=service_data['authority_id']).first()
+            if not authority:
+                raise ValueError("Authority not found")
+        except InvalidId:
+            raise ValueError("Invalid authority ID format")
+
         # Validate service icon exists if provided
         service_icon = None
+
         if service_data.get('serviceIconId'):
             try:
                 service_icon = Media.objects(id=service_data['serviceIconId']).first()
@@ -45,6 +56,7 @@ class ServiceService:
             max_people_per_slot=int(service_data.get('maxPeoplePerSlot', 1)),
             kyc=bool(service_data.get('kyc', False)),
             service_icon=service_icon,
+            authority=authority,
             status=service_data.get('status', 'Active')
         )
         
@@ -79,6 +91,15 @@ class ServiceService:
         
         return query.skip(skip).limit(limit).order_by('-created_at')
     
+    def get_all_authority_services(self, skip=0, limit=100, status_filter=None, authority_id=None):
+        query = {}
+        if status_filter:
+            query["status"] = status_filter
+        if authority_id:
+            query["authority"] = ObjectId(authority_id)  # filter by authority
+
+        return Service.objects(**query).skip(skip).limit(limit)
+
     def get_services_by_name(self, service_name: str) -> List[Service]:
         """
         Get services by name (partial match, case-insensitive)
@@ -143,18 +164,21 @@ class ServiceService:
     
     def delete_service(self, service_id: str) -> bool:
         """
-        Delete a service
+        Mark a service as deleted (soft delete)
         """
         try:
             service = Service.objects(id=service_id).first()
             if not service:
                 raise ValueError("Service not found")
-            
-            service.delete()
+        
+            # Mark as deleted by updating the status field
+            service.update(set__status="deleted")  # assuming 'status' is a field in your model
+        
             return True
-            
+    
         except InvalidId:
             raise ValueError("Invalid service ID format")
+
     
     def get_active_services(self) -> List[Service]:
         """

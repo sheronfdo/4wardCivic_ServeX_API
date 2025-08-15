@@ -3,6 +3,8 @@ from app.services.form_service import FormService
 from app.models.service import Service
 from app.models.form import Form
 import re
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.utils.decorators import role_required
 
 # Create blueprint for form routes
 form_bp = Blueprint('form', __name__, url_prefix='/form')
@@ -48,6 +50,9 @@ def create_form():
 
 
 @form_bp.route('/forms/<service_id>', methods=['GET'])
+# Mobile & GovAdmin API
+@jwt_required()
+@role_required('GovAdmin','Citizen')
 def get_forms_by_service(service_id):
     """Get all forms for a specific service"""
     try:
@@ -83,6 +88,9 @@ def get_forms_by_service(service_id):
 
 
 @form_bp.route('/<form_id>', methods=['GET'])
+# Mobile & GovAdmin API
+@jwt_required()
+@role_required('GovAdmin','Citizen')
 def get_form(form_id):
     """Get a specific form by ID"""
     try:
@@ -107,6 +115,8 @@ def get_form(form_id):
         }), 500
 
 @form_bp.route('/<form_id>', methods=['PUT'])
+@jwt_required()
+@role_required('GovAdmin')
 def update_form(form_id):
     """Update a specific form"""
     try:
@@ -142,6 +152,8 @@ def update_form(form_id):
         }), 500
 
 @form_bp.route('/<form_id>', methods=['DELETE'])
+@jwt_required()
+@role_required('GovAdmin')
 def delete_form(form_id):
     """Delete a specific form (soft delete)"""
     try:
@@ -169,6 +181,9 @@ def delete_form(form_id):
         }), 500
 
 @form_bp.route('/user/<user_id>', methods=['GET'])
+# Mobile & GovAdmin API
+@jwt_required()
+@role_required('GovAdmin','Citizen')
 def get_user_forms(user_id):
     """Get all forms created by a user"""
     try:
@@ -194,6 +209,9 @@ def get_user_forms(user_id):
         }), 500
 
 @form_bp.route('/<form_id>/submit', methods=['POST'])
+#Mobile API
+@jwt_required()
+@role_required('Citizen')
 def submit_form_response(form_id):
     """Submit a response to a form"""
     try:
@@ -240,6 +258,8 @@ def submit_form_response(form_id):
         }), 500
 
 @form_bp.route('/<form_id>/responses', methods=['GET'])
+@jwt_required()
+@role_required('GovAdmin')
 def get_form_responses(form_id):
     """Get all responses for a form"""
     try:
@@ -275,6 +295,8 @@ def get_form_responses(form_id):
         }), 500
 
 @form_bp.route('/<form_id>/analytics', methods=['GET'])
+@jwt_required()
+@role_required('GovAdmin')
 def get_form_analytics(form_id):
     """Get analytics for a form"""
     try:
@@ -302,6 +324,8 @@ def get_form_analytics(form_id):
         }), 500
 
 @form_bp.route('/<form_id>/duplicate', methods=['POST'])
+@jwt_required()
+@role_required('GovAdmin')
 def duplicate_form(form_id):
     """Duplicate an existing form"""
     try:
@@ -344,6 +368,8 @@ def duplicate_form(form_id):
         }), 500
 
 @form_bp.route('/<form_id>/export', methods=['GET'])
+@jwt_required()
+@role_required('GovAdmin')
 def export_form_data(form_id):
     """Export form and its responses as JSON"""
     try:

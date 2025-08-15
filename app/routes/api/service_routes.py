@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.service_service import ServiceService
 from app.services.form_service import FormService
 from app.models.respose import FormResponse
+from app.models.user import User
 from app.utils.decorators import role_required
 from bson.errors import InvalidId
 
@@ -18,8 +19,14 @@ def create_service():
     Create a new service
     """
     try:
+        current_user_Id = get_jwt_identity()
+        user = User.objects(id=current_user_Id).first()
+
+        if not user or not user.authority:
+            return jsonify({"error": "User does not have an authority"}), 403
         data = request.get_json()
-        
+        data["authority_id"] = str(user.authority.id)
+
         if not data:
             return jsonify({"error": "No data provided"}), 400
         
@@ -33,8 +40,10 @@ def create_service():
         return jsonify({"error": f"Failed to create service: {str(e)}"}), 500
 
 @service_bp.route('/services', methods=['GET'])
+
+# Mobile & GovAdmin API
 @jwt_required()
-@role_required('GovAdmin')
+@role_required('GovAdmin','Citizen')
 def get_all_services():
     """
     Get all services with optional filtering
@@ -51,11 +60,82 @@ def get_all_services():
         
     except Exception as e:
         return jsonify({"error": f"Failed to fetch services: {str(e)}"}), 500
-    
 
-@service_bp.route('/services/<service_id>', methods=['GET'])
+
+@service_bp.route('/Authority/services', methods=['GET'])
 @jwt_required()
 @role_required('GovAdmin')
+def get_all_Authority_services():
+    """
+    Get all services for the logged-in user's authority (or by query authority_id)
+    """
+    try:
+        skip = int(request.args.get('skip', 0))
+        limit = int(request.args.get('limit', 100))
+        status_filter = request.args.get('status')
+        authority_id = request.args.get('authority_id')  # optional
+
+        # Get current user
+        current_user_id = get_jwt_identity()
+        user = User.objects(id=current_user_id).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # If no authority_id passed, default to user's authority
+        if not authority_id:
+            if not user.authority:
+                return jsonify({"error": "User has no authority assigned"}), 403
+            authority_id = str(user.authority.id)
+
+        # Pass authority_id to service service
+        service_service = ServiceService()
+        services = service_service.get_all_authority_services(
+            skip=skip,
+            limit=limit,
+            status_filter="Active",
+            authority_id=authority_id
+        )
+
+        return jsonify([service.to_dict() for service in services]), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch services: {str(e)}"}), 500
+    
+
+@service_bp.route('/services/auth/<authority_id>', methods=['GET'])
+# Mobile API
+@jwt_required()
+@role_required('Citizen')
+def get_all_services_by_id(authority_id):
+    """
+    Get all services for a given authority_id
+    """
+    try:
+        skip = int(request.args.get('skip', 0))
+        limit = int(request.args.get('limit', 100))
+        status_filter = request.args.get('status')
+        authority_id = authority_id
+
+        if not authority_id:
+            return jsonify({"error": "authority_id is required"}), 400
+
+        service_service = ServiceService()
+        services = service_service.get_all_authority_services(
+            skip=skip,
+            limit=limit,
+            status_filter=status_filter,
+            authority_id=authority_id
+        )
+
+        return jsonify([service.to_dict() for service in services]), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch services: {str(e)}"}), 500
+
+@service_bp.route('/services/<service_id>', methods=['GET'])
+#Mobile & GovAdmin API
+@jwt_required()
+@role_required('GovAdmin','Citizen')
 def get_service_by_id(service_id):
     """
     Get a specific service by ID
@@ -105,7 +185,7 @@ def update_service(service_id):
     except Exception as e:
         return jsonify({"error": f"Failed to update service: {str(e)}"}), 500
 
-@service_bp.route('/service/<service_id>', methods=['DELETE'])
+@service_bp.route('/services/<service_id>', methods=['DELETE'])
 @jwt_required()
 @role_required('GovAdmin')
 def delete_service(service_id):
@@ -158,8 +238,9 @@ def update_service_status(service_id):
         return jsonify({"error": f"Failed to update service status: {str(e)}"}), 500
 
 @service_bp.route('/services/search', methods=['GET'])
+# Mobile API
 @jwt_required()
-@role_required('GovAdmin')
+@role_required('Citizen')
 def search_services():
     """
     Search services by name or note
@@ -195,8 +276,9 @@ def get_active_services():
         return jsonify({"error": f"Failed to fetch active services: {str(e)}"}), 500
     
 @service_bp.route('/services/requested/<email>', methods=['GET'])
+# Mobile API
 @jwt_required()
-@role_required('GovAdmin')
+@role_required('Citizen')
 def get_requested_services_by_email(email):
     """Get all services linked to forms submitted by this email"""
     try:
@@ -230,6 +312,60 @@ def get_requested_services_by_email(email):
         return jsonify({
             "success": True,
             "services": services_list
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Error retrieving requested services: {str(e)}"
+        }), 500
+
+@service_bp.route('/services/requested', methods=['GET'])
+# GovAdmin API
+@jwt_required()
+@role_required('GovAdmin')
+def get_requested_services():
+    """Get all services linked to forms submitted along with form response details"""
+    try:
+        form_responses = FormResponse.objects()
+
+        if not form_responses:
+            return jsonify({
+                "success": False,
+                "message": "No form submissions found"
+            }), 404
+
+        results = []
+        seen_service_ids = set()
+
+        for fr in form_responses:
+            # Get Service from Form
+            form_obj = fr.form
+            service_result = FormService.get_service_by_form_id(str(form_obj.id))
+            if not service_result["success"]:
+                continue
+
+            service = service_result["service"]
+            service_id = str(service["id"]) if isinstance(service, dict) else str(service.id)
+
+            if service_id not in seen_service_ids:
+                results.append({
+                    "service": service,
+                    "form_response": {
+                        "id": str(fr.id),
+                        "form_id": str(fr.form.id),
+                        "responses": fr.responses,
+                        "respondent_email": fr.respondent_email,
+                        "ip_address": fr.ip_address,
+                        "user_agent": fr.user_agent,
+                        "submitted_at": fr.submitted_at.isoformat() if fr.submitted_at else None
+                    }
+                })
+                seen_service_ids.add(service_id)
+
+        return jsonify({
+            "success": True,
+            "data": results
         }), 200
 
     except Exception as e:

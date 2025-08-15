@@ -2,26 +2,29 @@ from app.models.dashboard import Dashboard
 from datetime import datetime, timedelta
 
 class DashboardService:
+    def __init__(self):
+        """Initialize the Dashboard instance"""
+        self.dashboard = Dashboard()
     
-    def get_total_services_count(self):
-        """Get total services count"""
-        return self.dashboard_model.get_total_services()
+    def get_total_services_count(self, authority_id=None):
+        """Get total services count filtered by authority"""
+        return self.dashboard.get_total_services(authority_id)
     
-    def get_active_services_count(self):
-        """Get active services count"""
-        return self.dashboard_model.get_active_services()
+    def get_active_services_count(self, authority_id=None):
+        """Get active services count filtered by authority"""
+        return self.dashboard.get_active_services(authority_id)
     
-    def get_pending_services_count(self):
-        """Get pending services count"""
-        return self.dashboard_model.get_pending_services()
+    def get_pending_services_count(self, authority_id=None):
+        """Get pending services count filtered by authority"""
+        return self.dashboard.get_pending_services(authority_id)
     
-    def get_recent_services_count(self):
-        """Get recent services count (today)"""
-        return self.dashboard_model.get_recent_services()
+    def get_recent_services_count(self, authority_id=None):
+        """Get recent services count (today) filtered by authority"""
+        return self.dashboard.get_recent_services(authority_id)
     
-    def get_monthly_chart_data(self):
-        """Get formatted chart data for frontend"""
-        data = self.dashboard_model.get_monthly_usage_data()
+    def get_monthly_chart_data(self, authority_id=None):
+        """Get formatted chart data for frontend filtered by authority"""
+        data = self.dashboard.get_monthly_usage_data(authority_id)
         
         return {
             "labels": [
@@ -48,9 +51,9 @@ class DashboardService:
             ]
         }
     
-    def get_recent_activities(self, limit=5):
-        """Get recent activities with formatted timestamps"""
-        activities = self.dashboard_model.get_recent_activities(limit)
+    def get_recent_activities(self, limit=5, authority_id=None):
+        """Get recent activities with formatted timestamps filtered by authority"""
+        activities = self.dashboard.get_recent_activities(limit, authority_id)
         
         # Format activities for frontend
         formatted_activities = []
@@ -69,53 +72,30 @@ class DashboardService:
         
         return formatted_activities
     
-    def get_key_statistics(self):
-        """Get all key statistics for dashboard cards"""
-        total = self.get_total_services_count()
-        active = self.get_active_services_count()
-        pending = self.get_pending_services_count()
-        recent = self.get_recent_services_count()
-        
-        # Calculate growth/changes (you can implement your own logic)
-        return [
-            {
-                "title": "Total Registered",
-                "value": str(total),
-                "subtitle": f"Up by {recent} from last month",
-                "color": "bg-blue-500"
-            },
-            {
-                "title": "Active",
-                "value": str(active),
-                "subtitle": "Up by government",
-                "color": "bg-blue-600"
-            },
-            {
-                "title": "Pending",
-                "value": str(pending),
-                "subtitle": "Pending from last month",
-                "color": "bg-blue-700"
-            },
-            {
-                "title": "Recent",
-                "value": str(recent),
-                "subtitle": "New from today",
-                "color": "bg-blue-800"
-            }
-        ]
-    
-    def get_complete_dashboard_data(self):
-        """Get all dashboard data in one service call"""
+    def get_key_statistics(self, authority_id=None):
+        """Get all key statistics filtered by authority"""
         try:
             return {
-                "key_statistics": self.get_key_statistics(),
-                "chart_data": self.get_monthly_chart_data(),
-                "recent_activities": self.get_recent_activities(5),
+                "total_services": self.get_total_services_count(authority_id),
+                "active_services": self.get_active_services_count(authority_id),
+                "pending_services": self.get_pending_services_count(authority_id),
+                "recent_services": self.get_recent_services_count(authority_id),
+                "growth_trends": self.get_service_trends(authority_id=authority_id)
+            }
+        except Exception as e:
+            raise Exception(f"Error getting key statistics: {str(e)}")
+    
+    def get_complete_dashboard_data(self, authority_id=None):
+        """Get all dashboard data in one service call filtered by authority"""
+        try:
+            return {
+                "chart_data": self.get_monthly_chart_data(authority_id),
+                "recent_activities": self.get_recent_activities(5, authority_id),
                 "summary": {
-                    "total_services": self.get_total_services_count(),
-                    "active_services": self.get_active_services_count(),
-                    "pending_services": self.get_pending_services_count(),
-                    "recent_services": self.get_recent_services_count()
+                    "total_services": self.get_total_services_count(authority_id),
+                    "active_services": self.get_active_services_count(authority_id),
+                    "pending_services": self.get_pending_services_count(authority_id),
+                    "recent_services": self.get_recent_services_count(authority_id)
                 }
             }
         except Exception as e:
@@ -129,11 +109,12 @@ class DashboardService:
         growth = ((current - previous) / previous) * 100
         return round(growth, 1)
     
-    def get_service_trends(self, days=30):
-        """Get service trends for the last N days"""
+    def get_service_trends(self, days=30, authority_id=None):
+        """Get service trends for the last N days filtered by authority"""
         try:
             # You can implement trend calculation logic here
             # This is a placeholder for trend analysis
+            # You would add authority filtering logic here as well
             return {
                 "trend": "increasing",
                 "percentage": 5.2,

@@ -8,12 +8,16 @@ from app.services.service_service import ServiceService
 from app.services.media_service import MediaService
 from app.services.authority_service import AuthorityService
 from app.models.authority import Authority
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.utils.decorators import role_required
 
 # Create Blueprint
 authority_bp = Blueprint('authority', __name__, url_prefix='/authority')
 
-
+# Mobile API
 @authority_bp.route('/authorities', methods=['GET'])
+@jwt_required()
+@role_required('Citizen')
 def get_all_authorities():
     """
     Get all authorities
