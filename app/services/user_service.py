@@ -74,8 +74,8 @@ class UserService:
         }
         return response
 
-    def create_citizen_user(data):
-        """Create Government authority user"""
+    def create_citizen_user(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create citizen user"""
         try:
             if User.objects(email=data['email'].lower().strip()).first():
                 raise ValueError('Email already registered')
@@ -86,7 +86,7 @@ class UserService:
                 role=data.get('role', 'Citizen'),
                 authority=None,
                 is_verified=True,
-                status="PENDING"
+                status="ACTIVE"
             )
             user.save()
 
@@ -95,6 +95,26 @@ class UserService:
             return {'success': False, 'message': str(e)}
         except Exception as e:
             return {'success': False, 'message': f'Unexpected error: {str(e)}'}
+
+    def citizen_registration_details(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create citizen registration"""
+        try:
+            user = User.objects(id=data['citizen_id']).first()
+            if not user:
+                raise ValueError('User Not Found!')
+
+            user.fullname = data.get('fullname')
+            user.id_type = data.get('id_type')
+            user.id_number = data.get('id_number')
+            user.phone_number = data.get('phone_number')
+            user.save()
+
+            return {'success': True, 'data': {'id': str(user.id), 'email': user.email}}
+        except ValidationError as e:
+            return {'success': False, 'message': str(e)}
+        except Exception as e:
+            return {'success': False, 'message': f'Unexpected error: {str(e)}'}
+
 
     def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """
