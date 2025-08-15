@@ -21,6 +21,8 @@ def get_client_ip():
         return request.environ['HTTP_X_FORWARDED_FOR']
 
 @form_bp.route('/create', methods=['POST'])
+@jwt_required()
+@role_required('GovAdmin')
 def create_form():
     """Create a new form"""
     try:
@@ -211,10 +213,14 @@ def get_user_forms(user_id):
 @form_bp.route('/<form_id>/submit', methods=['POST'])
 #Mobile API
 @jwt_required()
-@role_required('Citizen')
+@role_required('Citizen','GovAdmin')
 def submit_form_response(form_id):
     """Submit a response to a form"""
     try:
+        user_Id = get_jwt_identity()
+        if not user_Id :
+            return jsonify({"error": "User Not Found "}), 403
+        
         # Validate ObjectId format
         if not validate_object_id(form_id):
             return jsonify({
@@ -223,27 +229,22 @@ def submit_form_response(form_id):
             }), 400
         
         data = request.get_json()
-        
+        data["user_id"] = str(user_Id)
+
         if not data:
             return jsonify({
                 'success': False,
                 'message': 'No response data provided'
             }), 400
+        data = request.get_json()
         
         # Extract response data and metadata
         response_data = data.get('responses', {})
-        respondent_email = data.get('respondent_email')
-        
-        # Get client information
-        ip_address = get_client_ip()
-        user_agent = request.headers.get('User-Agent')
         
         result = FormService.submit_form_response(
             form_id, 
+            user_Id,
             response_data, 
-            respondent_email, 
-            ip_address, 
-            user_agent
         )
         
         if result['success']:

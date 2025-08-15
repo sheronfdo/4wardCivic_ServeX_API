@@ -6,6 +6,8 @@ from app.models.form import Question
 from app.models.service import Service
 from app.models.media import Media
 from app.models.respose import FormResponse
+from app.models.user import User
+from app.models.service_requested import ServiceRequested
 from typing import List, Optional, Dict, Any
 
 class FormService:
@@ -183,11 +185,13 @@ class FormService:
                 'success': False,
             }
     @staticmethod
-    def submit_form_response(form_id: str, responses: dict, respondent_email: str = None,
-                             ip_address: str = None, user_agent: str = None) -> dict:
+    def submit_form_response(form_id: str, user_id: str,responses: dict,) -> dict:
         """Store user responses for a form"""
         try:
+
             form = Form.objects.get(id=form_id)
+            user = User.objects.get(id=user_id)
+            #service_requested = ServiceRequested.objects.get(id=None)
         except Form.DoesNotExist:
             return {'success': False, 'message': 'Form not found'}
         except Exception as e:
@@ -197,14 +201,13 @@ class FormService:
             # Create FormResponse object
             form_response = FormResponse(
                 form=form,
+                user=user,
                 responses=responses,
-                respondent_email=respondent_email,
-                ip_address=ip_address,
-                user_agent=user_agent,
+                status='PENDING',
                 submitted_at=datetime.utcnow()
             )
             form_response.save()
-            return {'success': True, 'message': 'Response submitted successfully'}
+            return {'success': True, 'message': 'Response submitted successfully','form_respose_id':str(form_response.id)}
         except Exception as e:
             return {'success': False, 'message': f'Error saving response: {str(e)}'}
         

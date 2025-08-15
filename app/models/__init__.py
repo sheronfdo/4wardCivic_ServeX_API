@@ -8,5 +8,6 @@ from app.models.service import Service
 from app.models.form import Form
 from app.models.dashboard import Dashboard
 from app.models.respose import FormResponse
+from app.models.service_requested import ServiceRequested
 
-__all__ = ['User', 'Media', 'Authority','Service','Form','Dashboard','FormResponse']
+__all__ = ['User', 'Media', 'Authority','Service','Form','Dashboard','FormResponse','ServiceRequested']
