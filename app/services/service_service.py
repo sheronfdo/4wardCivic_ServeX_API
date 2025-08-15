@@ -6,6 +6,8 @@ import re
 from app.models.media import Media
 from app.models.service import Service
 from app.models.authority import Authority 
+from datetime import datetime, timedelta
+from app.models.service_requested import ServiceRequested
 
 DUMMY_DATE = datetime(2025, 1, 1)
 
@@ -258,6 +260,56 @@ class ServiceService:
         
         if service.status not in ['Active', 'Inactive']:
             raise ValueError("Status must be either 'Active' or 'Inactive'")
+        
+    def get_available_slots(self,service_id, date_to_check, slots_requested=5):
+        """ Get available time slots for a service on a given future date """
+        # Convert date_to_check to datetime object
+        date_to_check = datetime.strptime(date_to_check, "%Y-%m-%d").date()
+    
+        # Fetch service from the database
+        service = Service.objects(id=service_id).first()
+        if not service:
+            return {"error": "Service not found"}
+
+        # Create the start and end time for the available slots
+        start_time = datetime.strptime(f"{date_to_check} {service.start_time}", "%Y-%m-%d %H:%M")
+        end_time = datetime.strptime(f"{date_to_check} {service.end_time}", "%Y-%m-%d %H:%M")
+    
+        # Map of booked slots and the number of people already booked
+        booked_slots = {}
+    
+        # Find all the booked slots on the given date
+        booked_services = ServiceRequested.objects(service=service, appoiment_Date=date_to_check)
+        for booked in booked_services:
+            slot_start = booked.slot_start_time
+            slot_end = booked.slot_end_time
+            # Add each booked slot's start time to the map
+            booked_slots[slot_start] = booked_slots.get(slot_start, 0) + 1
+    
+        available_slots = []
+    
+        # Iterate through all possible slots
+        current_time = start_time
+        while current_time + timedelta(minutes=service.slot_duration) <= end_time:
+            # Calculate the slot's end time
+            slot_end_time = current_time + timedelta(minutes=service.slot_duration)
+        
+            # Check how many people are already booked for this slot
+            if booked_slots.get(current_time, 0) < service.max_people_per_slot:
+                available_slots.append({
+                    "slot_start_time": current_time.strftime("%H:%M"),
+                    "slot_end_time": slot_end_time.strftime("%H:%M"),
+                })
+        
+            # Stop if we've found the requested number of available slots
+            if len(available_slots) >= slots_requested:
+                break
+        
+            # Move to the next slot
+            current_time = slot_end_time
+
+        return available_slots
+ 
         
 
 
