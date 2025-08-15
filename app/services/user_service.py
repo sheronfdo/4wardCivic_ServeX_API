@@ -7,6 +7,7 @@ from mongoengine import ValidationError, NotUniqueError
 from mongoengine.queryset.visitor import Q
 
 from app.models import Authority
+from app.models.kyc import Kyc
 from app.models.user import User
 from app.utils.email import send_verification_email
 from app.utils.validators import validate_email, validate_password, validate_user_data
@@ -108,6 +109,30 @@ class UserService:
             user.id_number = data.get('id_number')
             user.phone_number = data.get('phone_number')
             user.save()
+
+            return {'success': True, 'data': {'id': str(user.id), 'email': user.email}}
+        except ValidationError as e:
+            return {'success': False, 'message': str(e)}
+        except Exception as e:
+            return {'success': False, 'message': f'Unexpected error: {str(e)}'}
+
+    def kyc(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create citizen registration"""
+        try:
+            user = User.objects(id=data['citizen_id']).first()
+            if not user:
+                raise ValueError('User Not Found!')
+
+            kyc = Kyc(
+                citizen_id=user,
+                id_type=data.get('id_type'),
+                id_number=data.get('id_number'),
+                id_front_image=data.get('id_front_image'),
+                id_back_image=data.get('id_back_image'),
+                user_video=data.get('user_video'),
+                status="ACTIVE"
+            )
+            kyc.save()
 
             return {'success': True, 'data': {'id': str(user.id), 'email': user.email}}
         except ValidationError as e:
