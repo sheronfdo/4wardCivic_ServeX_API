@@ -171,13 +171,19 @@ def firebase_login():
 @jwt_required()
 @role_required('Citizen')
 def citizen_registration():
-    """Handle Firebase Google Sign-In and issue custom JWT"""
+    """Handle Firebase Google Sign-In and Create citizen profile details"""
     try:
         data = request.get_json()
         if not data:
             return jsonify({'message': 'No data provided'}), 400
 
+
+        current_user_id = get_jwt_identity()
+
         citizen_id = data['citizen_id']
+        if not current_user_id == citizen_id:
+            return jsonify({'message': 'Invalid Citizen Id'}), 401
+
         fullname = data['fullname']
         id_type = data['id_type']
         id_number = data['id_number']
@@ -194,10 +200,50 @@ def citizen_registration():
         result = user_service.citizen_registration_details(user_data)
         if not result['success']:
             return jsonify({'message': result['message']}), 400
-        return jsonify({'success':True, }), 200
+        return jsonify({'success':True, 'message': 'Citizen details upated successfully'}), 200
     except Exception as e:
         current_app.logger.error(f"Error during Firebase login: {str(e)}")
         return jsonify({'message': f'Login failed: {str(e)}'}), 500
+
+@auth_bp.route('/kyc', methods=['POST'])
+@jwt_required()
+@role_required('Citizen')
+def kyc():
+    """KYC process"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'message': 'No data provided'}), 400
+
+        current_user_id = get_jwt_identity()
+
+        citizen_id = data['citizen_id']
+        if not current_user_id == citizen_id:
+            return jsonify({'message': 'Invalid Citizen Id'}), 401
+
+        citizen_id = data['citizen_id']
+        id_type = data['id_type']
+        id_number = data['id_number']
+        id_front_image = data['id_front_image']
+        id_back_image = data['id_back_image']
+        user_video = data['user_video']
+
+        kyc = {
+            'citizen_id':citizen_id,
+            'id_type': id_type,
+            'id_number': id_number,
+            'id_front_image': id_front_image,
+            'id_back_image': id_back_image,
+            'user_video': user_video,
+        }
+
+        result = user_service.kyc(kyc)
+        if not result['success']:
+            return jsonify({'message': result['message']}), 400
+        return jsonify({'success':True, 'message': 'KYC process successful' }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error during KYC process: {str(e)}")
+        return jsonify({'message': f'process failed: {str(e)}'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
