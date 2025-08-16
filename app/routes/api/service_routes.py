@@ -103,7 +103,6 @@ def get_all_Authority_services():
     
 
 @service_bp.route('/services/auth/<authority_id>', methods=['GET'])
-# Mobile API
 @jwt_required()
 @role_required('Citizen')
 def get_all_services_by_id(authority_id):

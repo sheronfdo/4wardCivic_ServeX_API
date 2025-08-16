@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    container_name: servex_app
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongo
+      - minio
+    volumes:
+      - ./uploads:/app/uploads
+
+  mongo:
+    image: mongo:7
+    container_name: servex_mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpass
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  minio:
+    image: minio/minio:latest
+    container_name: servex_minio
+    restart: always
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+
+volumes:
+  mongo_data:
+  minio_data:
