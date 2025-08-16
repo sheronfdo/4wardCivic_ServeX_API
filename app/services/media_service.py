@@ -47,6 +47,9 @@ class MediaService:
             unique_filename = f"{uuid.uuid4()}_{filename}"
             file_path = f"media/{unique_filename}"
 
+            # Get MinIO endpoint and bucket from environment variables
+            full_url = f"{current_app.config['MINIO_ENDPOINT']}/{current_app.config['MINIO_BUCKET']}/{file_path}"
+
             # Upload to MinIO
             current_app.minio_client.put_object(
                 Bucket=current_app.config['MINIO_BUCKET'],
@@ -57,7 +60,7 @@ class MediaService:
             
             # Save to database
             media_item = Media(
-                file_path=file_path,
+                file_path=full_url,
                 file_name=filename,
                 is_public=is_public
             )
