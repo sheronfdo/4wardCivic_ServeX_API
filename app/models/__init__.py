@@ -9,5 +9,6 @@ from app.models.form import Form
 from app.models.dashboard import Dashboard
 from app.models.respose import FormResponse
 from app.models.service_requested import ServiceRequested
+from app.models.kyc import Kyc
 
-__all__ = ['User', 'Media', 'Authority','Service','Form','Dashboard','FormResponse','ServiceRequested']
+__all__ = ['User', 'Media', 'Authority','Service','Form','Dashboard','FormResponse','ServiceRequested', 'Kyc']
