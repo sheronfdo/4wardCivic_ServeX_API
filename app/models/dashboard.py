@@ -1,6 +1,7 @@
 from datetime import datetime
 from app.models.service import Service
-from app.models.activity import Activity  # Assuming you have an Activity model
+from app.models.activity import Activity
+from app.models.service_requested import ServiceRequested  # Assuming you have an Activity model
 from bson import ObjectId
 
 class Dashboard:
@@ -99,7 +100,7 @@ class Dashboard:
                 {"$sort": {"_id": 1}}
             ])
             
-            result = list(Service.objects.aggregate(pipeline))
+            result = list(ServiceRequested.objects.aggregate(pipeline))
             
             # Initialize data for all 12 months
             service_data = [0] * 12

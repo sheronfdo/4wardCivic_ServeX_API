@@ -3,11 +3,12 @@ from datetime import datetime
 from app.models.service import Service
 from app.models.status import STATUS
 from app.models.user import User 
-
+from app.models.authority import Authority
 
 class ServiceRequested(Document):
     user = ReferenceField(User, required=True)
     service = ReferenceField(Service, required=True)
+    authority = ReferenceField(Authority,required=True)
     appoiment_Date = DateTimeField(required=True) 
     slot_start_time = DateTimeField(required=True)
     slot_end_time = DateTimeField(required=True)
@@ -17,7 +18,7 @@ class ServiceRequested(Document):
 
     meta = {
         'collection': 'service_requested',
-        'indexes': ['service', 'status', 'created_at']
+        'indexes': ['service', 'status', 'created_at','authority']
     }
     
     def save(self, *args, **kwargs):
