@@ -320,59 +320,59 @@ def get_requested_services_by_email(email):
             "message": f"Error retrieving requested services: {str(e)}"
         }), 500
 
-@service_bp.route('/services/requested', methods=['GET'])
-# GovAdmin API
-@jwt_required()
-@role_required('GovAdmin')
-def get_requested_services():
-    """Get all services linked to forms submitted along with form response details"""
-    try:
-        form_responses = FormResponse.objects()
+# @service_bp.route('/services/requested', methods=['GET'])
+# # GovAdmin API
+# @jwt_required()
+# @role_required('GovAdmin')
+# def get_requested_services():
+#     """Get all services linked to forms submitted along with form response details"""
+#     try:
+#         form_responses = FormResponse.objects()
 
-        if not form_responses:
-            return jsonify({
-                "success": False,
-                "message": "No form submissions found"
-            }), 404
+#         if not form_responses:
+#             return jsonify({
+#                 "success": False,
+#                 "message": "No form submissions found"
+#             }), 404
 
-        results = []
-        seen_service_ids = set()
+#         results = []
+#         seen_service_ids = set()
 
-        for fr in form_responses:
-            # Get Service from Form
-            form_obj = fr.form
-            service_result = FormService.get_service_by_form_id(str(form_obj.id))
-            if not service_result["success"]:
-                continue
+#         for fr in form_responses:
+#             # Get Service from Form
+#             form_obj = fr.form
+#             service_result = FormService.get_service_by_form_id(str(form_obj.id))
+#             if not service_result["success"]:
+#                 continue
 
-            service = service_result["service"]
-            service_id = str(service["id"]) if isinstance(service, dict) else str(service.id)
+#             service = service_result["service"]
+#             service_id = str(service["id"]) if isinstance(service, dict) else str(service.id)
 
-            if service_id not in seen_service_ids:
-                results.append({
-                    "service": service,
-                    "form_response": {
-                        "id": str(fr.id),
-                        "form_id": str(fr.form.id),
-                        "responses": fr.responses,
-                        "respondent_email": fr.respondent_email,
-                        "ip_address": fr.ip_address,
-                        "user_agent": fr.user_agent,
-                        "submitted_at": fr.submitted_at.isoformat() if fr.submitted_at else None
-                    }
-                })
-                seen_service_ids.add(service_id)
+#             if service_id not in seen_service_ids:
+#                 results.append({
+#                     "service": service,
+#                     "form_response": {
+#                         "id": str(fr.id),
+#                         "form_id": str(fr.form.id),
+#                         "responses": fr.responses,
+#                         # "respondent_email": fr.respondent_email,
+#                         # "ip_address": fr.ip_address,
+#                         # "user_agent": fr.user_agent,
+#                         "submitted_at": fr.submitted_at.isoformat() if fr.submitted_at else None
+#                     }
+#                 })
+#                 seen_service_ids.add(service_id)
 
-        return jsonify({
-            "success": True,
-            "data": results
-        }), 200
+#         return jsonify({
+#             "success": True,
+#             "data": results
+#         }), 200
 
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": f"Error retrieving requested services: {str(e)}"
-        }), 500
+#     except Exception as e:
+#         return jsonify({
+#             "success": False,
+#             "message": f"Error retrieving requested services: {str(e)}"
+#         }), 500
 
 @service_bp.route('/service/avilibleslot', methods=['GET'])
 # GovAdmin API
@@ -383,7 +383,7 @@ def get_avilable_slot():
     try:
         service_service = ServiceService()
         data = request.get_json()
-        services = service_service.get_available_slots(data.get("service_id"), data.get("date_to_check"), 5)
+        services = service_service.get_available_slots(data.get("service_id"),"2025-08-16",5)
         
         return jsonify(services), 200
         

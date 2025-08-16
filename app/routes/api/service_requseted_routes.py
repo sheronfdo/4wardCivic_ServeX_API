@@ -50,4 +50,32 @@ def create_requested_Service():
             'success': False,
             'message': f'Server error: {str(e)}'
         }), 500
-    
+
+@service_requsted_bp.route('/requested', methods=['GET'])
+@jwt_required()
+@role_required('Citizen', 'GovAdmin')   
+def get_requested_services():
+    """Get all services linked to forms submitted along with form response details"""
+    try:
+        current_user_id = get_jwt_identity()
+        
+        if not current_user_id:
+            return jsonify({"error": "User not found"}), 403
+        
+        current_user_role = request.headers.get('User-Role')
+           
+        result = ServiceRequestedService.get_all_requested_services(
+            user_id=current_user_id,
+            user_role=current_user_role
+        )
+        
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Error retrieving requested services: {str(e)}"
+        }), 500

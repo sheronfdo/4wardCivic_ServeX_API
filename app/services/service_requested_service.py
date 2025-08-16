@@ -80,7 +80,84 @@ class ServiceRequestedService:
                 'success': False,
                 'message': f'Error creating service request: {str(e)}'
             }
-    
+        
+    @staticmethod
+    def get_all_requested_services(user_id=None, user_role=None):
+        """Get all requested services with their form responses"""
+        try:
+            # Build query based on user role
+            if user_role == 'Citizen':
+                # Citizens can only see their own requests
+                if not user_id:
+                    return {
+                        'success': False,
+                        'message': 'User ID is required for citizens'
+                    }
+                query = {'user': ObjectId(user_id)}
+            else:
+                # GovAdmin can see all requests
+                query = {}
+            
+            # Get all service requests
+            service_requests = ServiceRequested.objects(**query).select_related()
+            
+            requested_services_data = []
+            
+            for service_request in service_requests:
+                # Get form responses linked to this service request
+                form_responses = FormResponse.objects(service_requested=service_request.id)
+                
+                # Format form responses data
+                form_responses_data = []
+                for form_response in form_responses:
+                    form_responses_data.append({
+                        'id': str(form_response.id),
+                        'form_id': str(form_response.form.id) if form_response.form else None,
+                        'form_title': form_response.form.title if form_response.form else None,
+                        'responses': form_response.responses if hasattr(form_response, 'responses') else {},
+                        'status': form_response.status if hasattr(form_response, 'status') else 'UNKNOWN',
+                        'created_at': form_response.created_at.isoformat() if hasattr(form_response, 'created_at') else None,
+                        'updated_at': form_response.updated_at.isoformat() if hasattr(form_response, 'updated_at') else None
+                    })
+                
+                # Format service request data
+                service_data = {
+                    'id': str(service_request.id),
+                    'user': {
+                        'id': str(service_request.user.id),
+                        'name': service_request.user.name if hasattr(service_request.user, 'name') else 'Unknown',
+                        'email': service_request.user.email if hasattr(service_request.user, 'email') else 'Unknown'
+                    },
+                    'service': {
+                        'id': str(service_request.service.id),
+                        'title': service_request.service.title if hasattr(service_request.service, 'title') else 'Unknown',
+                        'description': service_request.service.description if hasattr(service_request.service, 'description') else ''
+                    },
+                    'appointment_date': service_request.appoiment_Date.isoformat() if service_request.appoiment_Date else None,
+                    'slot_start_time': service_request.slot_start_time.isoformat() if service_request.slot_start_time else None,
+                    'slot_end_time': service_request.slot_end_time.isoformat() if service_request.slot_end_time else None,
+                    'status': service_request.status,
+                    'form_responses': form_responses_data,
+                    'form_responses_count': len(form_responses_data),
+                    'created_at': service_request.created_at.isoformat() if hasattr(service_request, 'created_at') else None,
+                    'updated_at': service_request.updated_at.isoformat() if hasattr(service_request, 'updated_at') else None
+                }
+                
+                requested_services_data.append(service_data)
+            
+            return {
+                'success': True,
+                'data': requested_services_data,
+                'count': len(requested_services_data),
+                'message': f'Retrieved {len(requested_services_data)} requested services'
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving requested services: {str(e)}'    
+            }
+        
 def process_form_response(form_responses_Ids: List[str], serviceRequestedId):
     """Update form responses to link them to the service request"""
     try:
