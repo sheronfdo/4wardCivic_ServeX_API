@@ -20,6 +20,9 @@ class ServiceRequestedService:
             # Get and validate service
             service_id = service_requested_data.get('serviceId')
             user_id = service_requested_data.get('user_id')
+
+            slot_start_time = service_requested_data.get("slot_start_time") 
+            slot_end_time = service_requested_data.get("slot_end_time")
             
             form_responses_Ids = service_requested_data.get('form_responses_ids', [])
             appointment_date_only= None
@@ -28,10 +31,20 @@ class ServiceRequestedService:
                 appointment_date_only =datetime_obj.date()
             except Exception as e:
                 print(e)
-            
+            if slot_start_time and slot_end_time:
+    
+                start_time = datetime.combine(appointment_date_only, 
+                                datetime.strptime(slot_start_time, "%H:%M").time())
+                end_time = datetime.combine(appointment_date_only, 
+                              datetime.strptime(slot_end_time, "%H:%M").time())
+            else:
+                # Handle case when optional fields are not provided
+                start_time = None
+                end_time = None
+           
             # Combine the date with time to create full datetime objects
-            start_time = datetime.combine(appointment_date_only, datetime.strptime(service_requested_data.get("slot_start_time"), "%H:%M").time())
-            end_time = datetime.combine(appointment_date_only, datetime.strptime(service_requested_data.get("slot_end_time"), "%H:%M").time())
+            #start_time = datetime.combine(appointment_date_only, datetime.strptime(service_requested_data.get("slot_start_time"), "%H:%M").time())
+            #end_time = datetime.combine(appointment_date_only, datetime.strptime(service_requested_data.get("slot_end_time"), "%H:%M").time())
             # Validate if ObjectId is correct
             if not service_id or not ObjectId.is_valid(service_id):
                 return {

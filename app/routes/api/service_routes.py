@@ -274,20 +274,22 @@ def get_active_services():
     except Exception as e:
         return jsonify({"error": f"Failed to fetch active services: {str(e)}"}), 500
     
-@service_bp.route('/services/requested/<email>', methods=['GET'])
+@service_bp.route('/services/requested/', methods=['GET'])
 # Mobile API
 @jwt_required()
 @role_required('Citizen')
-def get_requested_services_by_email(email):
-    """Get all services linked to forms submitted by this email"""
+def get_requested_services_by_User():
+    """Get all services linked to forms submitted by this user"""
     try:
+        current_user_Id = get_jwt_identity()
+        user = User.objects(id=current_user_Id).first()
         # Step 1: Find all form responses from this email
-        form_responses = FormResponse.objects(respondent_email=email)
+        form_responses = FormResponse.objects(user=user)
 
         if not form_responses:
             return jsonify({
                 "success": False,
-                "message": "No form submissions found for this email"
+                "message": "No form submissions found for this user"
             }), 404
 
         services_list = []
@@ -376,18 +378,33 @@ def get_requested_services_by_email(email):
 @service_bp.route('/service/avilibleslot', methods=['GET'])
 # GovAdmin API
 @jwt_required()
-@role_required('GovAdmin')
-def get_avilable_slot():
-    """Get all avilible slot details"""
+@role_required('GovAdmin','Citizen')
+def get_available_slot():
+    """Get all available slot details"""
     try:
+        service_id = request.args.get("service_id")  # ✅ get from query param
+        if not service_id:
+            return jsonify({"error": "Missing service_id"}), 400
+
         service_service = ServiceService()
-        data = request.get_json()
-        services = service_service.get_available_slots(data.get("service_id"),"2025-08-16",5)
-        
+        services = service_service.get_available_slots(service_id, "2025-08-24", 5)
         return jsonify(services), 200
-        
     except Exception as e:
         return jsonify({"error": f"Failed to fetch active services: {str(e)}"}), 500
+
+
+
+# def get_avilable_slot():
+#     """Get all avilible slot details"""
+#     try:
+#         service_service = ServiceService()
+#         data = request.get_json()
+#         services = service_service.get_available_slots(data.get("service_id"),"2025-08-16",5)
+        
+#         return jsonify(services), 200
+        
+#     except Exception as e:
+#         return jsonify({"error": f"Failed to fetch active services: {str(e)}"}), 500
 
 
 # @service_bp.route('/media/<media_id>', methods=['GET'])
