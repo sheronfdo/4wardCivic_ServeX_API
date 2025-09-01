@@ -9,6 +9,7 @@ from app.utils.decorators import role_required
 from app.utils.validators import validate_user_data
 from app.services.authority_service import AuthorityService
 from app.models.authority import Authority
+from app.models.user import User
 from firebase_admin import auth
 
 auth_bp = Blueprint('auth', __name__)
@@ -245,6 +246,56 @@ def kyc():
         current_app.logger.error(f"Error during KYC process: {str(e)}")
         return jsonify({'message': f'process failed: {str(e)}'}), 500
 
+@auth_bp.route('/staff-registration', methods=['POST'])
+@jwt_required()
+@role_required('GovAdmin')
+def staff_registration():
+    data = request.get_json()
+    
+    current_user_id = get_jwt_identity()
+    
+    # Get authority by ID
+    if current_user_id:
+        user = User.objects(id=current_user_id).first()
+        if not user:
+            return jsonify({'message': 'Invalid authority Admin ID'}), 400
+    else:
+        return jsonify({'message': 'Authority Admin ID is required'}), 400
+    
+    # Extract fields from request data
+    fullname = data.get('fullname')
+    email = data.get('email')
+    name = data.get('username')
+    phone_number = data.get('phone')  # Note: Fix the comma in your original code
+    staffroleID = data.get('roll')  # Added for consistency with frontend
+
+    # Check if all required fields are present
+    if not all([fullname, email, name, staffroleID]):
+        return jsonify({'message': 'Missing required fields'}), 400
+
+    try:
+        # Create staff user
+        result = UserService.create_authority_staff({
+            'fullname': fullname,
+            'name': name,
+            'email': email,
+            'phone': phone_number,
+            'staffrole': staffroleID,
+            'authority': str(user.authority.id)  # Pass object ID
+        })
+        if result['success']:
+            return jsonify({
+                'message': 'Authority Staff registered. Verification email sent if needed.',
+                'user': result['data'],
+                'is_verification_needed': not result['is_verified']
+            }), 201
+        else:
+            return jsonify({'message': result['message']}), 400
+
+    except Exception as e:
+        current_app.logger.error(f"Error registering admin: {str(e)}")
+        return jsonify({'message': str(e)}), 400
+
 @auth_bp.route('/login', methods=['POST'])
 def login():
     """Login user"""
@@ -269,8 +320,9 @@ def login():
         user_data = auth_result['data']
         
         # Check if user is Admin (as per your original requirement)
-        if user_data['role'] != 'GovAdmin':
+        if user_data['role'] not in ['GovAdmin', 'GovStaff']:
             return jsonify({'message': 'Access denied: Admins only'}), 403
+
         
         # Create access token
         access_token = create_access_token(identity=user_data['id'])
@@ -305,23 +357,99 @@ def validate_token():
     
 
 #
-# @auth_bp.route('/profile', methods=['GET'])
-# @jwt_required()
-# def get_profile():
-#     """Get current user profile"""
-#     try:
-#         current_user_id = get_jwt_identity()
-#         user = user_service.get_user_by_id(current_user_id)
-#
-#         if not user:
-#             return jsonify({'message': 'User not found'}), 404
-#
-#         return jsonify({'user': user.to_dict()}), 200
-#
-#     except Exception as e:
-#         return jsonify({'message': str(e)}), 500
-#
-#
+@auth_bp.route('/profile/authority', methods=['GET'])
+@jwt_required()
+@role_required('GovAdmin')
+def get_profile():
+    """Get current authority & Admin profile"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = user_service.get_user_by_id(current_user_id)
+        
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+
+        # Prepare response data matching your frontend expectations
+        profile_data = {
+            # Authority Details
+            'authorityName': user.authority.authorityName if user.authority.authorityName else '',
+            'email': user.authority.email if user.authority.email else '',
+            'address': user.authority.address if user.authority.address else '',
+            'phoneNumber': user.authority.phoneNumber if user.authority.phoneNumber else '',
+            'hotline': user.authority.hotline if user.authority.hotline else '',
+            'authorityIconurl': user.authority.authorityIconId.file_path,
+            
+            # Admin Details (from user)
+            'adminName': user.name if user.name else '',
+            'adminEmail': user.email,
+            
+            # Additional info
+            # 'userId': user.id,
+            # 'authorityId': user.authority_id if hasattr(user, 'authority_id') else None
+        }
+
+        return jsonify(profile_data), 200
+
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+    
+
+
+@auth_bp.route('/profile/update', methods=['PUT'])
+@jwt_required()
+@role_required('GovAdmin')
+def update_profile():
+    """Update current authority & Admin profile"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = user_service.get_user_by_id(current_user_id)
+        
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+
+        # Get form data
+        data = request.get_json() if request.is_json else request.form.to_dict()
+        authority_id = str(user.authority.id)
+        
+        authority_service = AuthorityService()
+      
+        # Update authority information if user has authority linked
+        authority_updates = {}
+        
+        # Map frontend fields to backend fields
+        if 'authorityName' in data:
+            authority_updates['authorityName'] = data['authorityName']
+        if 'email' in data:
+            authority_updates['email'] = data['email']
+        if 'address' in data:
+            authority_updates['address'] = data['address']
+        if 'phoneNumber' in data:
+            authority_updates['phoneNumber'] = data['phoneNumber']
+        if 'hotline' in data:
+            authority_updates['hotline'] = data['hotline']
+        if 'authorityIconId' in data:
+            authority_updates['authorityIconId'] = data['authorityIconId']
+        
+        # Update authority
+        if authority_updates:
+            authority_id = authority_service.update_authority(authority_id, **authority_updates)
+        
+        # Update admin/user information
+        user_updates = {}
+        if 'adminName' in data:
+            user_updates['name'] = data['adminName']
+        if 'adminEmail' in data:
+            user_updates['email'] = data['adminEmail']
+        
+        # Update user
+        if user_updates:
+            user_service.update_user(current_user_id, user_updates)
+        
+        return jsonify({'message': 'Profile updated successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
 # @auth_bp.route('/profile', methods=['PUT'])
 # @jwt_required()
 # def update_profile():

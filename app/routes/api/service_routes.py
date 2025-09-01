@@ -64,7 +64,7 @@ def get_all_services():
 
 @service_bp.route('/Authority/services', methods=['GET'])
 @jwt_required()
-@role_required('GovAdmin')
+@role_required('GovAdmin','GovStaff')
 def get_all_Authority_services():
     """
     Get all services for the logged-in user's authority (or by query authority_id)
@@ -134,7 +134,7 @@ def get_all_services_by_id(authority_id):
 @service_bp.route('/services/<service_id>', methods=['GET'])
 #Mobile & GovAdmin API
 @jwt_required()
-@role_required('GovAdmin','Citizen')
+@role_required('GovAdmin','Citizen','GovStaff')
 def get_service_by_id(service_id):
     """
     Get a specific service by ID

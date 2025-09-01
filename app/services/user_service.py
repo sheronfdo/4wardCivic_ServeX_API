@@ -7,12 +7,14 @@ from mongoengine import ValidationError, NotUniqueError
 from mongoengine.queryset.visitor import Q
 
 from app.models import Authority
+from app.models.staff_roll import StaffRoll
 from app.models.kyc import Kyc
 from app.models.user import User
-from app.utils.email import send_verification_email
+from app.utils.email import send_verification_email ,send_password_email
 from app.utils.validators import validate_email, validate_password, validate_user_data
 import uuid
 from bson.errors import InvalidId
+from bson import ObjectId
 
 
 class UserService:
@@ -135,6 +137,73 @@ class UserService:
             kyc.save()
 
             return {'success': True, 'data': {'id': str(user.id), 'email': user.email}}
+        except ValidationError as e:
+            return {'success': False, 'message': str(e)}
+        except Exception as e:
+            return {'success': False, 'message': f'Unexpected error: {str(e)}'}
+
+
+    def create_authority_staff(data):
+        """Create Government authority staff"""
+        try:
+            
+            if User.objects(email=data['email'].lower().strip()).first():
+                raise ValueError('Email already registered')
+
+            authority_obj = Authority.objects(id=ObjectId(data['authority'])).first()
+            # authority = Authority.objects(id=ObjectId(authority_id)).first()
+            if not authority_obj:
+                return {
+                    'success': False,
+                    'message': 'Authority not found'
+                }
+            staffrole_obj = StaffRoll.objects(id=ObjectId(data['staffrole'])).first()
+            token = None
+            if data['email'].lower().strip() != authority_obj.email:
+                token = str(uuid.uuid4())
+            user = User(
+                fullname=data.get('fullname'),
+                name=data.get('name'),
+                email=data['email'].lower().strip(),
+                role=data.get('role', 'GovStaff'),
+                password="Not Genrated",
+                authority=authority_obj,
+                staffrole= staffrole_obj,
+                verification_token=token,
+                is_verified=(data['email'].lower().strip() == authority_obj.email),
+                status="PENDING"
+            )
+            # user.set_password(data['password'])
+
+            if user.is_verified:
+                user.is_verified = True
+                user.verification_token = None
+                user.status = "ACTIVE"
+                authority = authority_obj
+                if not authority:
+                    raise ValueError('Authority not found')
+                authority.status = "ACTIVE"
+                authority.save()
+
+                password = send_password_email(user.email, user.name)
+                print(password)  # Check the password being sent
+                user.set_password(password)
+            else:
+                send_verification_email(data['email'], data['name'], token, is_authority=False)
+            # else:
+            #     password = send_password_email(user.email, user.name)
+            #     print(password)
+            #     user.set_password(password)
+
+
+            user.save()
+            if token and not user.is_verified:
+                #send_verification_email(data['email'], data['name'], token, is_authority=False)
+                password = send_password_email(user.email, user.name)
+                print(password)
+                user.set_password(password)
+                user.save()
+            return {'success': True, 'data': {'id': str(user.id), 'email': user.email}, 'is_verified': user.is_verified}
         except ValidationError as e:
             return {'success': False, 'message': str(e)}
         except Exception as e:

@@ -57,7 +57,10 @@ class FormService:
                         scaleMax=q.get('scaleMax'),
                         minLabel=q.get('minLabel'),
                         maxLabel=q.get('maxLabel'),
-                        media=media_obj
+                        media=media_obj,
+                        fileUploadType=q.get('fileUploadType', 'any'),
+                        maxFileSize=q.get('maxFileSize', 10),
+                        customFileTypes=q.get('customFileTypes', '')
                     )
                 )
 

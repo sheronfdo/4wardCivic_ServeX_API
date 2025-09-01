@@ -59,7 +59,7 @@ def create_requested_Service():
 
 @service_requsted_bp.route('/requested', methods=['GET'])
 @jwt_required()
-@role_required('GovAdmin')   
+@role_required('GovAdmin','Citizen')
 def get_requested_services():
     """Get all services linked to forms submitted along with form response details"""
     try:
@@ -79,6 +79,32 @@ def get_requested_services():
         result = ServiceRequestedService.get_all_requested_services(
             user_id=current_user_id,
             authority_id=authority_id
+        )
+        
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Error retrieving requested services: {str(e)}"
+        }), 500
+
+@service_requsted_bp.route('user/requested', methods=['GET'])
+@jwt_required()
+@role_required('Citizen')
+def get_requested_services_by_user():
+    """Get all services linked to forms submitted along with form response details"""
+    try:
+        current_user_id = get_jwt_identity()
+        
+        if not current_user_id:
+            return jsonify({"error": "User not found"}), 403
+           
+        result = ServiceRequestedService.get_all_requested_services_by_user(
+            user_id=current_user_id,
         )
         
         if result['success']:
@@ -126,6 +152,8 @@ def get_requested_services_count():
             "success": False,
             "message": f"Error retrieving requested services: {str(e)}"
         }), 500
+    
+
     
 @service_requsted_bp.route('/peek', methods=['GET'])
 @jwt_required()

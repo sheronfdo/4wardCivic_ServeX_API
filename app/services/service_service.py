@@ -8,7 +8,7 @@ from app.models.service import Service
 from app.models.authority import Authority 
 from datetime import datetime, timedelta
 from app.models.service_requested import ServiceRequested
-
+from app.services.process_service import ProcessService
 DUMMY_DATE = datetime(2025, 1, 1)
 
 def parse_time_to_dummy_datetime(time_str):
@@ -67,7 +67,26 @@ class ServiceService:
         self._validate_service_data(service)
         
         service.save()
+        if service_data.get('processes'):
+            try:
+                print(service.id)    
+                result = ProcessService.create_process_for_service(
+                    service_id=str(service.id),
+                    processes_data=service_data['processes']
+                )
+                    
+                if not result.get('success'):
+                    # If any process fails, you might want to handle this
+                    print(f"Warning: Failed to create process: {result.get('message')}")
+                        
+            except Exception as e:
+                # You might want to decide whether to rollback the service creation
+                # or just log the error and continue
+                print(f"Error creating processes: {str(e)}")
+                # Optionally: raise ValueError(f"Service created but process creation failed: {str(e)}")
+        
         return service
+     
     
     def get_service_by_id(self, service_id: str) -> Optional[Service]:
         """

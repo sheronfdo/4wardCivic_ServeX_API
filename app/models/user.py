@@ -6,13 +6,13 @@ from mongoengine import Document, StringField, EmailField, DateTimeField, Boolea
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.models.authority import Authority
 from app.models.status import STATUS
-
+from app.models.staff_roll import StaffRoll
 
 class User(Document):
     """User document model"""
     
     # User role choices
-    ROLES = ('GovAdmin', 'Citizen')
+    ROLES = ('GovAdmin','GovStaff', 'Citizen')
     ID_TYPES = ('NIC', 'PASSPORT', 'DRIVING_LICENSE')
     
     # Fields
@@ -24,6 +24,7 @@ class User(Document):
     email = EmailField(required=True, unique=True)
     password = StringField(required=False)
     role = StringField(max_length=20, choices=ROLES)
+    staffrole = ReferenceField(StaffRoll,required=False)
     authority = ReferenceField(Authority, required=False)
     is_active = BooleanField(default=True)
     verification_token = StringField()
@@ -84,10 +85,22 @@ class User(Document):
         self.name = self.name.strip() if self.name else ''
         self.updated_at = datetime.utcnow()
 
-        if self.role != 'GovAdmin':
+        # Role-based validation
+        if self.role == 'Citizen':
+            # Citizens should not have authority or staff roles
             self.authority = None
-        elif not self.authority:
-         raise ValueError("Admin role requires an authority.")
+            self.staffrole = None
+        elif self.role == 'GovAdmin':
+            # GovAdmin must have authority, but not staff role
+            if not self.authority:
+                raise ValueError("GovAdmin role requires an authority.")
+            self.staffrole = None
+        elif self.role == 'GovStaff':
+            # GovStaff must have both authority and staff role
+            if not self.authority:
+                raise ValueError("GovStaff role requires an authority.")
+            if not self.staffrole:
+                raise ValueError("GovStaff role requires a staff role.")
 
     
     def __str__(self):

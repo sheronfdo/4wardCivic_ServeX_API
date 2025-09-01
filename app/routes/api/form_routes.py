@@ -54,7 +54,7 @@ def create_form():
 @form_bp.route('/forms/<service_id>', methods=['GET'])
 # Mobile & GovAdmin API
 @jwt_required()
-@role_required('GovAdmin','Citizen')
+@role_required('GovAdmin','Citizen','GovStaff')
 def get_forms_by_service(service_id):
     """Get all forms for a specific service"""
     try:

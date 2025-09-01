@@ -9,6 +9,8 @@ from app.routes.api.form_routes import form_bp
 from app.routes.api.authority_routes import authority_bp
 from app.routes.api.dashbord_routes import dashboard_bp
 from app.routes.api.service_requseted_routes import service_requsted_bp
+from app.routes.api.staff_routes import staff_bp
+from app.routes.api.process_routes import process_bp
 # Create main API blueprint
 api_bp = Blueprint('api', __name__)
 
@@ -20,6 +22,8 @@ api_bp.register_blueprint(form_bp, url_prefix='/form')
 api_bp.register_blueprint(authority_bp, url_prefix='/authority')
 api_bp.register_blueprint(dashboard_bp, url_prefix='/dash')
 api_bp.register_blueprint(service_requsted_bp, url_prefix='/servicerequested')
+api_bp.register_blueprint(staff_bp,url_prefix='/staff')
+api_bp.register_blueprint(process_bp,url_prefix='/process')
 # Health check route
 @api_bp.route('/health', methods=['GET'])
 def health_check():
